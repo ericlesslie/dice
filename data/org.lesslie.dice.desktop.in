@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=dice
+Exec=dice
+Icon=org.lesslie.dice
+Terminal=false
+Type=Application
+Categories=GTK;
+StartupNotify=true

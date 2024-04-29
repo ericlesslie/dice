@@ -1,0 +1,4 @@
+data/org.lesslie.dice.desktop.in
+data/org.lesslie.dice.metainfo.xml.in
+data/org.lesslie.dice.gschema.xml
+src/window.ui
