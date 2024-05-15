@@ -22,6 +22,8 @@ use gtk::prelude::*;
 use adw::subclass::prelude::*;
 use gtk::{gio, glib};
 
+use super::glium_gl_area::GliumGLArea;
+
 mod imp {
     use super::*;
 
@@ -32,7 +34,7 @@ mod imp {
         #[template_child]
         pub header_bar: TemplateChild<adw::HeaderBar>,
         #[template_child]
-        pub label: TemplateChild<gtk::Label>,
+        pub dice_area: TemplateChild<GliumGLArea>,
     }
 
     #[glib::object_subclass]

@@ -21,6 +21,7 @@
 mod application;
 mod config;
 mod window;
+mod glium_gl_area;
 
 use self::application::DiceApplication;
 use self::window::DiceWindow;
@@ -30,12 +31,31 @@ use gettextrs::{bind_textdomain_codeset, bindtextdomain, textdomain};
 use gtk::{gio, glib};
 use gtk::prelude::*;
 
+use std::ptr;
+
 fn main() -> glib::ExitCode {
     // Set up gettext translations
     bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR).expect("Unable to bind the text domain");
     bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8")
         .expect("Unable to set the text domain encoding");
     textdomain(GETTEXT_PACKAGE).expect("Unable to switch to the text domain");
+
+    {
+        #[cfg(target_os = "macos")]
+        let library = unsafe { libloading::os::unix::Library::new("libepoxy.0.dylib") }.unwrap();
+        #[cfg(all(unix, not(target_os = "macos")))]
+        let library = unsafe { libloading::os::unix::Library::new("libepoxy.so.0") }.unwrap();
+        #[cfg(windows)]
+        let library = libloading::os::windows::Library::open_already_loaded("libepoxy-0.dll")
+            .or_else(|_| libloading::os::windows::Library::open_already_loaded("epoxy-0.dll"))
+            .unwrap();
+
+        epoxy::load_with(|name| {
+            unsafe { library.get::<_>(name.as_bytes()) }
+                .map(|symbol| *symbol)
+                .unwrap_or(ptr::null())
+        });
+    }
 
     // Load resources
     let resources = gio::Resource::load(PKGDATADIR.to_owned() + "/dice.gresource")
