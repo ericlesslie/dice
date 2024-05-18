@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use glium::{
     implement_vertex, index::PrimitiveType, program, uniform, Frame, IndexBuffer, Surface,
-    VertexBuffer,
+    VertexBuffer, Version, Api
 };
 use gtk::{glib, prelude::*, subclass::prelude::*};
 use std::time::{Duration, Instant};
@@ -184,7 +184,15 @@ impl Renderer {
             self.context.get_framebuffer_dimensions(),
         );
 
-        println!("Surface has_depth_buffer: {}",frame.has_depth_buffer());
+        // Some tests
+        println!("Surface has_depth_buffer: {}", frame.has_depth_buffer());
+
+        let num  = frame.get_depth_buffer_bits();
+        if let Some(i) = num {
+            println!("u16 found {:?}!", i);
+        } else {
+            println!("Didn't match a u16.");
+        }
 
         let perspective = {
             let (width, height) = self.context.get_framebuffer_dimensions();
@@ -224,6 +232,7 @@ impl Renderer {
             perspective: perspective,
         };
 
+        /*
         let params = glium::DrawParameters {
             depth: glium::Depth {
                 test: glium::draw_parameters::DepthTest::IfLess,
@@ -232,15 +241,16 @@ impl Renderer {
             },
             ..Default::default()
         };
+        */
 
-        frame.clear_color_and_depth((0., 0., 0., 0.), 1.0);
+        frame.clear_color(0., 0., 0., 0.);
         frame
             .draw(
                 &self.vertex_buffer,
                 &self.index_buffer,
                 &self.program,
                 &uniforms,
-                &params,
+                &Default::default(),
             )
             .unwrap();
         frame.finish().unwrap();
@@ -345,6 +355,7 @@ impl WidgetImpl for GliumGLArea {
         let context =
             unsafe { glium::backend::Context::new(widget.clone(), true, Default::default()) }
                 .unwrap();
+
         *self.renderer.borrow_mut() = Some(Renderer::new(context));
     }
 
