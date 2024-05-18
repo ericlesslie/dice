@@ -358,6 +358,7 @@ impl WidgetImpl for GliumGLArea {
 impl GLAreaImpl for GliumGLArea {
     // Is a glib::Propagation in post 0.7 gtk, need to figure out how to update
     fn render(&self, _context: &gtk::gdk::GLContext) -> bool {
+        println!("B");
         self.renderer.borrow().as_ref().unwrap().draw();
         false
     }

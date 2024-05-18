@@ -32,7 +32,7 @@ mod imp {
     pub struct DiceWindow {
         // Template widgets
         #[template_child]
-        pub header_bar: TemplateChild<adw::HeadergBar>,
+        pub header_bar: TemplateChild<adw::HeaderBar>,
         #[template_child]
         pub dice_area: TemplateChild<GliumGLArea>,
         #[template_child]
