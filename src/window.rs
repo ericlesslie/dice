@@ -32,7 +32,7 @@ mod imp {
     pub struct DiceWindow {
         // Template widgets
         #[template_child]
-        pub header_bar: TemplateChild<adw::HeaderBar>,
+        pub header_bar: TemplateChild<adw::HeadergBar>,
         #[template_child]
         pub dice_area: TemplateChild<GliumGLArea>,
         #[template_child]
@@ -66,7 +66,7 @@ mod imp {
     impl ObjectImpl for DiceWindow {
         fn constructed(&self) {
             let has_depth_buffer = self.dice_area.has_depth_buffer();
-            println!("{}", has_depth_buffer);
+            println!("GLArea has_depth_buffer: {}", has_depth_buffer);
         }
     }
     impl WidgetImpl for DiceWindow {}

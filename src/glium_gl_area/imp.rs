@@ -184,6 +184,8 @@ impl Renderer {
             self.context.get_framebuffer_dimensions(),
         );
 
+        println!("Surface has_depth_buffer: {}",frame.has_depth_buffer());
+
         let perspective = {
             let (width, height) = self.context.get_framebuffer_dimensions();
             let aspect_ratio = height as f32 / width as f32;
@@ -356,7 +358,6 @@ impl WidgetImpl for GliumGLArea {
 impl GLAreaImpl for GliumGLArea {
     // Is a glib::Propagation in post 0.7 gtk, need to figure out how to update
     fn render(&self, _context: &gtk::gdk::GLContext) -> bool {
-        println!("B");
         self.renderer.borrow().as_ref().unwrap().draw();
         false
     }
