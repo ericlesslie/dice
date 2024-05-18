@@ -1,3 +1,3 @@
-# dice
+# Dice
 
-A description of this project.
+An OpenGL die roller.
