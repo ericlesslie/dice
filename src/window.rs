@@ -35,6 +35,16 @@ mod imp {
         pub header_bar: TemplateChild<adw::HeaderBar>,
         #[template_child]
         pub dice_area: TemplateChild<GliumGLArea>,
+        #[template_child]
+        pub four_side: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub six_side: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub eight_side: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub twelve_side: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub twenty_side: TemplateChild<gtk::Button>,
     }
 
     #[glib::object_subclass]
@@ -45,6 +55,7 @@ mod imp {
 
         fn class_init(klass: &mut Self::Class) {
             klass.bind_template();
+            klass.bind_template_instance_callbacks();
         }
 
         fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
@@ -52,7 +63,12 @@ mod imp {
         }
     }
 
-    impl ObjectImpl for DiceWindow {}
+    impl ObjectImpl for DiceWindow {
+        fn constructed(&self) {
+            let has_depth_buffer = self.dice_area.has_depth_buffer();
+            println!("{}", has_depth_buffer);
+        }
+    }
     impl WidgetImpl for DiceWindow {}
     impl WindowImpl for DiceWindow {}
     impl ApplicationWindowImpl for DiceWindow {}
@@ -64,10 +80,43 @@ glib::wrapper! {
         @extends gtk::Widget, gtk::Window, gtk::ApplicationWindow, adw::ApplicationWindow,        @implements gio::ActionGroup, gio::ActionMap;
 }
 
+#[gtk::template_callbacks]
 impl DiceWindow {
     pub fn new<P: glib::IsA<gtk::Application>>(application: &P) -> Self {
         glib::Object::builder()
             .property("application", application)
             .build()
+    }
+
+    #[template_callback]
+    fn handle_four_clicked(&self) {
+        println!("Four clicked");
+    }
+
+    #[template_callback]
+    fn handle_six_clicked(&self) {
+        let imp = &self.imp();
+        imp.dice_area.call_spin_six();
+        println!("Six clicked");
+    }
+
+    #[template_callback]
+    fn handle_eight_clicked(&self) {
+        println!("Eight clicked");
+    }
+
+    #[template_callback]
+    fn handle_ten_clicked(&self) {
+        println!("Ten clicked");
+    }
+
+    #[template_callback]
+    fn handle_twelve_clicked(&self) {
+        println!("Twelve clicked");
+    }
+
+    #[template_callback]
+    fn handle_twenty_clicked(&self) {
+        println!("Twenty clicked");
     }
 }

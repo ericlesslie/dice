@@ -4,6 +4,7 @@ using Adw 1;
 template $DiceWindow : Adw.ApplicationWindow {
   default-width: 600;
   default-height: 300;
+  title: _("Dice");
   content: Adw.ToolbarView {
     [top]
     Adw.HeaderBar header_bar {
@@ -26,6 +27,7 @@ template $DiceWindow : Adw.ApplicationWindow {
 
 
         $GliumGLArea dice_area {
+          has-depth-buffer: true;
           width-request: 300;
           height-request: 300;
         }
@@ -48,6 +50,7 @@ template $DiceWindow : Adw.ApplicationWindow {
               margin-bottom: 8;
               name: "4";
               label: _("4");
+              clicked => $handle_four_clicked() swapped;
             }
 
             Button six_side {
@@ -55,6 +58,7 @@ template $DiceWindow : Adw.ApplicationWindow {
               margin-bottom: 8;
               name: "6";
               label: _("6");
+              clicked => $handle_six_clicked() swapped;
             }
 
             Button eight_side {
@@ -62,6 +66,7 @@ template $DiceWindow : Adw.ApplicationWindow {
               margin-bottom: 8;
               name: "8";
               label: _("8");
+              clicked => $handle_eight_clicked() swapped;
             }
 
             Button ten_side {
@@ -69,6 +74,7 @@ template $DiceWindow : Adw.ApplicationWindow {
               margin-bottom: 8;
               name: "10";
               label: _("10");
+              clicked => $handle_ten_clicked() swapped;
             }
 
             Button twelve_side {
@@ -76,6 +82,7 @@ template $DiceWindow : Adw.ApplicationWindow {
               margin-bottom: 8;
               name: "12";
               label: _("12");
+              clicked => $handle_twelve_clicked() swapped;
             }
 
             Button twenty_side {
@@ -83,6 +90,7 @@ template $DiceWindow : Adw.ApplicationWindow {
               margin-bottom: 8;
               name: "20";
               label: _("20");
+              clicked => $handle_twenty_clicked() swapped;
             }
           }
         }

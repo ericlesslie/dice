@@ -1,10 +1,11 @@
 mod imp;
 
-use gtk::{gdk, glib, prelude::*};
+use gtk::{gdk, glib, prelude::*, subclass::prelude::*};
 
 glib::wrapper! {
     pub struct GliumGLArea(ObjectSubclass<imp::GliumGLArea>)
-        @extends gtk::GLArea, gtk::Widget;
+        @extends gtk::GLArea, gtk::Widget,
+        @implements gtk::Root;
 }
 
 impl Default for GliumGLArea {
@@ -45,5 +46,14 @@ unsafe impl glium::backend::Backend for GliumGLArea {
 
     fn resize(&self, size: (u32, u32)) {
         self.set_size_request(size.0 as i32, size.1 as i32);
+    }
+}
+
+
+impl GliumGLArea {
+    pub fn call_spin_six(&self) {
+        if let Some(rendrer) = self.imp().renderer.borrow().as_ref() {
+            rendrer.six_spin();
+        }
     }
 }
