@@ -26,10 +26,9 @@ template $DiceWindow : Adw.ApplicationWindow {
         valign: center;
 
 
-        $GliumGLArea dice_area {
-          has-depth-buffer: true;
-          width-request: 300;
-          height-request: 300;
+        $DiceArea dice_area {
+          width-request: 400;
+          height-request: 400;
         }
 
         Frame {

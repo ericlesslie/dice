@@ -21,7 +21,8 @@
 mod application;
 mod config;
 mod window;
-mod glium_gl_area;
+mod dice_area;
+mod die;
 
 use self::application::DiceApplication;
 use self::window::DiceWindow;

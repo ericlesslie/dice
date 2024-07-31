@@ -22,7 +22,7 @@ use gtk::prelude::*;
 use adw::subclass::prelude::*;
 use gtk::{gio, glib};
 
-use super::glium_gl_area::GliumGLArea;
+use crate::dice_area::DiceArea;
 
 mod imp {
     use super::*;
@@ -34,7 +34,7 @@ mod imp {
         #[template_child]
         pub header_bar: TemplateChild<adw::HeaderBar>,
         #[template_child]
-        pub dice_area: TemplateChild<GliumGLArea>,
+        pub dice_area: TemplateChild<DiceArea>,
         #[template_child]
         pub four_side: TemplateChild<gtk::Button>,
         #[template_child]
@@ -63,12 +63,7 @@ mod imp {
         }
     }
 
-    impl ObjectImpl for DiceWindow {
-        fn constructed(&self) {
-            let has_depth_buffer = self.dice_area.has_depth_buffer();
-            println!("GLArea has_depth_buffer: {}", has_depth_buffer);
-        }
-    }
+    impl ObjectImpl for DiceWindow {}
     impl WidgetImpl for DiceWindow {}
     impl WindowImpl for DiceWindow {}
     impl ApplicationWindowImpl for DiceWindow {}
@@ -95,9 +90,11 @@ impl DiceWindow {
 
     #[template_callback]
     fn handle_six_clicked(&self) {
-        let imp = &self.imp();
-        imp.dice_area.call_spin_six();
         println!("Six clicked");
+        let imp = &self.imp();
+        imp.dice_area.add_six();
+
+        println!("Six finished");
     }
 
     #[template_callback]
