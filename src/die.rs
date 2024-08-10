@@ -1,9 +1,12 @@
 use rand::prelude::*;
-use std::time::{Duration, Instant};
+use std::time::Instant;
+use std::cell::Cell;
 
+#[derive(Clone, Copy)]
 pub enum DieKind {
     Four,
     Six,
+    Eight,
     Ten,
     Twelve,
     Twenty
@@ -11,20 +14,20 @@ pub enum DieKind {
 
 #[derive(Clone)]
 pub struct Die {
-  pub time: Option<Instant>,
+  pub time: Cell<Option<Instant>>,
   pub kind: DieKind,
-  pub val: u32,
+  pub val: Cell<u32>,
 }
 
 impl Die {
-    pub fn new(kind: DieKind) {
-        let val = generate_roll(kind);
-        Self { time: Some(Instant::now()), kind, val }
+    pub fn new(kind: DieKind) -> Self {
+        let val = Self::generate_roll(kind);
+        Self { time: Cell::new(Some(Instant::now())), kind, val: Cell::new(val) }
     }
 
     pub fn roll(&self) {
-        self.time = Some(Instant::now());
-        self.val = generate_roll(self.kind);
+        self.time.set(Some(Instant::now()));
+        self.val.set(Self::generate_roll(self.kind));
     }
 
     fn generate_roll(kind: DieKind) -> u32 {

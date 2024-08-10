@@ -1,27 +1,29 @@
 use gtk::{gdk, glib, prelude::*, subclass::prelude::*};
-use std::{time::Instant};
+// use std::{time::Instant};
 
-use crate::glib::clone;
+// TODO Use Die Crate
+use crate::die::{Die, DieKind};
 
-use crate::die::Die;
+// For Testing
+use gl::*;
 
 mod imp {
 
-    use std::{cell::RefCell, time::Instant, f32::consts::PI, rc::Rc};
+    use std::{cell::RefCell, /* time::Instant, f32::consts::PI, */ rc::Rc};
     use glium::{
         implement_vertex, index::PrimitiveType, program, uniform, Frame, IndexBuffer, Surface,
         VertexBuffer
     };
     use gtk::{glib, prelude::*, subclass::prelude::*};
 
-    use crate::die::Die;
+    use graphene::{Point3D, Matrix};
+    use crate::die::{Die, DieKind};
 
     #[derive(Copy, Clone)]
     struct Vertex {
         position: [f32; 3],
         color: [f32; 3],
     }
-
     implement_vertex!(Vertex, position, color);
 
     #[derive(Copy, Clone)]
@@ -29,8 +31,7 @@ mod imp {
         // Fit both rotations and translations here
         world_matrix: [[f32; 4]; 4],
     }
-
-    implement_vertex!(Attr, world_position);
+    implement_vertex!(Attr, world_matrix);
 
     pub struct Renderer {
         context: Rc<glium::backend::Context>,
@@ -60,7 +61,8 @@ mod imp {
         twenty_index_buffer: IndexBuffer<u16>,
         twenty_per_instance: VertexBuffer<Attr>,
 
-        dice: RefCell<Vec<Die>>,
+        pub dice: Vec<Die>,
+        prev_size: usize,
     }
 
     impl Renderer {
@@ -76,19 +78,19 @@ mod imp {
                 &[
                     Vertex {
                         position: [0.5, 0.5, 0.5],
-                        color: [0., 1., 0.],
+                        color: [0.180, 0.761, 0.494],
                     },
                     Vertex {
                         position: [0.5, -0.5, -0.5],
-                        color: [0., 0., 1.],
+                        color: [0.180, 0.761, 0.494],
                     },
                     Vertex {
                         position: [-0.5, 0.5, -0.5],
-                        color: [1., 0., 0.],
+                        color: [0.180, 0.761, 0.494],
                     },
                     Vertex {
                         position: [-0.5, -0.5, 0.5],
-                        color: [0., 1., 0.],
+                        color: [0.180, 0.761, 0.494],
                     },
                 ],
             )
@@ -100,35 +102,35 @@ mod imp {
                 &[
                     Vertex {
                         position: [-0.5, -0.5, -0.5],
-                        color: [0., 1., 0.],
+                        color: [0.110, 0.443, 0.847],
                     },
                     Vertex {
                         position: [0.5, -0.5, -0.5],
-                        color: [0., 0., 1.],
+                        color: [0.110, 0.443, 0.847],
                     },
                     Vertex {
                         position: [0.5, 0.5, -0.5],
-                        color: [1., 0., 0.],
+                        color: [0.110, 0.443, 0.847],
                     },
                     Vertex {
                         position: [-0.5, 0.5, -0.5],
-                        color: [0., 1., 0.],
+                        color: [0.110, 0.443, 0.847],
                     },
                     Vertex {
                         position: [-0.5, -0.5, 0.5],
-                        color: [0., 0., 1.],
+                        color: [0.110, 0.443, 0.847],
                     },
                     Vertex {
                         position: [0.5, -0.5, 0.5],
-                        color: [0., 1., 0.],
+                        color: [0.110, 0.443, 0.847],
                     },
                     Vertex {
                         position: [0.5, 0.5, 0.5],
-                        color: [1., 0., 0.],
+                        color: [0.110, 0.443, 0.847],
                     },
                     Vertex {
                         position: [-0.5, 0.5, 0.5],
-                        color: [0., 1., 0.],
+                        color: [0.110, 0.443, 0.847],
                     },
                 ],
             )
@@ -139,27 +141,27 @@ mod imp {
                 &[
                     Vertex {
                         position: [0.5, 0., 0.],
-                        color: [0., 1., 0.],
+                        color: [0.506, 0.239, 0.612],
                     },
                     Vertex {
                         position: [-0.5, 0., 0.],
-                        color: [0., 0., 1.],
+                        color: [0.506, 0.239, 0.612],
                     },
                     Vertex {
                         position: [0., 0.5, 0.],
-                        color: [1., 0., 0.],
+                        color: [0.506, 0.239, 0.612],
                     },
                     Vertex {
                         position: [0., -0.5, 0.],
-                        color: [0., 1., 0.],
+                        color: [0.506, 0.239, 0.612],
                     },
                     Vertex {
                         position: [0., 0., 0.5],
-                        color: [0., 0., 1.],
+                        color: [0.506, 0.239, 0.612],
                     },
                     Vertex {
                         position: [0., 0., -0.5],
-                        color: [0., 1., 0.],
+                        color: [0.506, 0.239, 0.612],
                     },
                 ],
             )
@@ -171,19 +173,19 @@ mod imp {
                 &[
                     Vertex {
                         position: [0.5, 0.5, 0.5],
-                        color: [0., 1., 0.],
+                        color: [0.753, 0.110, 0.157]
                     },
                     Vertex {
                         position: [0.5, -0.5, -0.5],
-                        color: [0., 0., 1.],
+                        color: [0.753, 0.110, 0.157]
                     },
                     Vertex {
                         position: [-0.5, 0.5, -0.5],
-                        color: [1., 0., 0.],
+                        color: [0.753, 0.110, 0.157]
                     },
                     Vertex {
                         position: [-0.5, -0.5, 0.5],
-                        color: [0., 1., 0.],
+                        color: [0.753, 0.110, 0.157]
                     },
                 ],
             )
@@ -194,83 +196,83 @@ mod imp {
                 &[
                     Vertex {
                         position: [0.5, 0.5, 0.5],
-                        color: [0., 1., 0.],
+                        color: [0.961, 0.761, 0.067]
                     },
                     Vertex {
                         position: [-0.5, 0.5, 0.5],
-                        color: [0., 0., 1.],
+                        color: [0.961, 0.761, 0.067]
                     },
                     Vertex {
                         position: [0.5, -0.5, 0.5],
-                        color: [1., 0., 0.],
+                        color: [0.961, 0.761, 0.067]
                     },
                     Vertex {
                         position: [0.5, 0.5, -0.5],
-                        color: [0., 1., 0.],
+                        color: [0.961, 0.761, 0.067]
                     },
                     Vertex {
                         position: [-0.5, -0.5, 0.5],
-                        color: [0., 0., 1.],
+                        color: [0.961, 0.761, 0.067]
                     },
                     Vertex {
                         position: [0.5, -0.5, -0.5],
-                        color: [0., 1., 0.],
+                        color: [0.961, 0.761, 0.067]
                     },
                     Vertex {
                         position: [-0.5, 0.5, -0.5],
-                        color: [0., 1., 0.],
+                        color: [0.961, 0.761, 0.067]
                     },
                     Vertex {
                         position: [-0.5, -0.5, -0.5],
-                        color: [0., 1., 0.],
+                        color: [0.961, 0.761, 0.067]
                     },
                     Vertex {
                         position: [0., 0.5 / PHI, PHI / 2.],
-                        color: [0., 1., 0.],
+                        color: [0.961, 0.761, 0.067]
                     },
                     Vertex {
                         position: [0., -0.5 / PHI, PHI / 2.],
-                        color: [0., 1., 0.],
+                        color: [0.961, 0.761, 0.067]
                     },
                     Vertex {
                         position: [0., 0.5 / PHI, -PHI / 2.],
-                        color: [0., 1., 0.],
+                        color: [0.961, 0.761, 0.067]
                     },
                     Vertex {
                         position: [0., -0.5 / PHI, -PHI / 2.],
-                        color: [0., 1., 0.],
+                        color: [0.961, 0.761, 0.067]
                     },
                     Vertex {
                         position: [0.5 / PHI, PHI / 2., 0.],
-                        color: [0., 1., 0.],
+                        color: [0.961, 0.761, 0.067]
                     },
                     Vertex {
                         position: [-0.5 / PHI, PHI / 2., 0.],
-                        color: [0., 1., 0.],
+                        color: [0.961, 0.761, 0.067]
                     },
                     Vertex {
                         position: [0.5 / PHI, -PHI / 2., 0.],
-                        color: [0., 1., 0.],
+                        color: [0.961, 0.761, 0.067]
                     },
                     Vertex {
                         position: [-0.5 / PHI, -PHI / 2., 0.],
-                        color: [0., 1., 0.],
+                        color: [0.961, 0.761, 0.067]
                     },
                     Vertex {
                         position: [PHI / 2., 0., 0.5 / PHI],
-                        color: [0., 1., 0.],
+                        color: [0.961, 0.761, 0.067]
                     },
                     Vertex {
                         position: [-PHI / 2., 0., 0.5 / PHI],
-                        color: [0., 1., 0.],
+                        color: [0.961, 0.761, 0.067]
                     },
                     Vertex {
                         position: [PHI / 2., 0., -0.5 / PHI],
-                        color: [0., 1., 0.],
+                        color: [0.961, 0.761, 0.067]
                     },
                     Vertex {
                         position: [-PHI / 2., 0., -0.5 / PHI],
-                        color: [0., 1., 0.],
+                        color: [0.961, 0.761, 0.067]
                     },
                 ],
             )
@@ -281,51 +283,51 @@ mod imp {
                 &[
                     Vertex {
                         position: [0., 0.5, PHI / 2.],
-                        color: [0., 1., 0.],
+                        color: [0.902, 0.380, 0.000]
                     },
                     Vertex {
                         position: [0., -0.5, PHI / 2.],
-                        color: [0., 0., 1.],
+                        color: [0.902, 0.380, 0.000]
                     },
                     Vertex {
                         position: [0., 0.5, -PHI / 2.],
-                        color: [0., 0., 1.],
+                        color: [0.902, 0.380, 0.000]
                     },
                     Vertex {
                         position: [0., -0.5, -PHI / 2.],
-                        color: [0., 0., 1.],
+                        color: [0.902, 0.380, 0.000]
                     },
                     Vertex {
                         position: [0.5, PHI / 2., 0.],
-                        color: [1., 0., 0.],
+                        color: [0.902, 0.380, 0.000]
                     },
                     Vertex {
                         position: [0.5, -PHI / 2., 0.],
-                        color: [0., 1., 0.],
+                        color: [0.902, 0.380, 0.000]
                     },
                     Vertex {
                         position: [-0.5, PHI / 2., 0.],
-                        color: [0., 0., 1.],
+                        color: [0.902, 0.380, 0.000]
                     },
                     Vertex {
                         position: [-0.5, -PHI / 2., 0.],
-                        color: [0., 1., 0.],
+                        color: [0.902, 0.380, 0.000]
                     },
                     Vertex {
                         position: [PHI / 2., 0., 0.5],
-                        color: [1., 0., 0.],
+                        color: [0.902, 0.380, 0.000]
                     },
                     Vertex {
                         position: [PHI / 2., 0., -0.5],
-                        color: [1., 0., 0.],
+                        color: [0.902, 0.380, 0.000]
                     },
                     Vertex {
                         position: [-PHI / 2., 0., 0.5],
-                        color: [1., 0., 0.],
+                        color: [0.902, 0.380, 0.000]
                     },
                     Vertex {
                         position: [-PHI / 2., 0., -0.5],
-                        color: [1., 0., 0.],
+                        color: [0.902, 0.380, 0.000]
                     },
                 ],
             )
@@ -500,37 +502,14 @@ mod imp {
             let twenty_index_buffer =
                 IndexBuffer::new(&context, PrimitiveType::TrianglesList, &twenty_indices).unwrap();
 
+
             // TODO get the GResource state
-            let four_per_instance = {
-                let data = Vec::new();
-                VertexBuffer::dynamic(&context, &data).unwrap()
-            };
-
-            let six_per_instance = {
-                let data = Vec::new();
-                VertexBuffer::dynamic(&context, &data).unwrap()
-            };
-
-            let eight_per_instance = {
-                let data = Vec::new();
-                VertexBuffer::dynamic(&context, &data).unwrap()
-            };
-
-            let ten_per_instance = {
-                let data = Vec::new();
-                VertexBuffer::dynamic(&context, &data).unwrap()
-            };
-
-            let twelve_per_instance = {
-                let data = Vec::new();
-                VertexBuffer::dynamic(&context, &data).unwrap()
-            };
-
-            let twenty_per_instance = {
-                let data = Vec::new();
-                VertexBuffer::dynamic(&context, &data).unwrap()
-            };
-
+            let four_per_instance: VertexBuffer<Attr> = VertexBuffer::empty_dynamic(&context, 0).unwrap();
+            let six_per_instance: VertexBuffer<Attr> = VertexBuffer::empty_dynamic(&context, 0).unwrap();
+            let eight_per_instance: VertexBuffer<Attr> = VertexBuffer::empty_dynamic(&context, 0).unwrap();
+            let ten_per_instance: VertexBuffer<Attr> = VertexBuffer::empty_dynamic(&context, 0).unwrap();
+            let twelve_per_instance: VertexBuffer<Attr> = VertexBuffer::empty_dynamic(&context, 0).unwrap();
+            let twenty_per_instance: VertexBuffer<Attr> = VertexBuffer::empty_dynamic(&context, 0).unwrap();
 
             let program = program!(&context,
                 // This example includes a shader that requires GLSL 1.40 or above.
@@ -552,10 +531,9 @@ mod imp {
                 140 => {
                     vertex: "
                         #version 140
-                        uniform mat4 matrix;
+                        in mat4 world_matrix;
                         uniform mat4 perspective;
 
-                        in mat4 world_matrix
                         in vec3 position;
                         in vec3 color;
                         out vec3 vColor;
@@ -578,7 +556,7 @@ mod imp {
                     vertex: "
                         #version 300 es
 
-                        uniform mat4 matrix;
+                        in mat4 world_matrix;
                         uniform mat4 perspective;
 
                         in vec3 position;
@@ -586,7 +564,7 @@ mod imp {
                         out vec3 vColor;
 
                         void main() {
-                            gl_Position = vec4(position, 1.0) * matrix * perspective;
+                            gl_Position = vec4(position, 1.0) * world_matrix * perspective;
                             vColor = color;
                         }
                     ",
@@ -605,10 +583,8 @@ mod imp {
             )
             .unwrap();
 
-
-
-
-            let dice = RefCell::new(Vec::new());
+            let dice = Vec::new();
+            let prev_size = 0usize;
 
             Renderer {
                 context,
@@ -632,42 +608,15 @@ mod imp {
                 twenty_index_buffer,
                 twenty_per_instance,
                 dice,
+                prev_size,
             }
         }
 
-        fn draw(&self) {
+        fn draw(&mut self) {
             let mut frame = Frame::new(
                 self.context.clone(),
                 self.context.get_framebuffer_dimensions(),
             );
-
-            /* TODO Needs to be in world_matrix
-            let matrix = {
-                let mut theta: f32 = 0.0;
-                let mut phi: f32 = 0.0;
-                let mut psi: f32 = 0.0;
-
-                if let Some(start) = elapsed {
-                    let duration = start.elapsed().as_secs_f32();
-                    println!("{:?}", duration);
-
-                    if duration > 4.0 {
-                        let mut borrow = *self.roll.borrow_mut();
-                        borrow.take();
-                    } else {
-                        theta = duration / 4.0 * PI;
-                        phi = theta * 2.0;
-                        psi = theta * 4.0;
-                    }
-                }
-
-                [
-                    [                                      theta.cos() * psi.cos(),                                      theta.cos() * psi.sin(),            -theta.sin(),    0.],
-                    [ -phi.cos() * psi.sin() + phi.sin() * theta.sin() * psi.cos(),  phi.cos() * psi.cos() + phi.sin() * theta.sin() * psi.sin(), phi.sin() * theta.cos(),    0.],
-                    [  phi.sin() * psi.sin() + phi.cos() * theta.sin() * psi.cos(), -phi.sin() * psi.cos() + phi.cos() * theta.sin() * psi.sin(), phi.cos() * theta.cos(),    0.],
-                    [                                                           0.,                                                           0.,                      0.,  1f32],
-                ]
-            }; */
 
             let perspective = {
                 let (width, height) = self.context.get_framebuffer_dimensions();
@@ -688,71 +637,223 @@ mod imp {
             };
 
             let uniforms = uniform! {
-                matrix: matrix,
                 perspective: perspective,
             };
 
+            let size: &usize = &self.dice.len();
+
+            /* Updating
+                let mut mapping = self.six_per_instance.map();
+
+
+                for instance in mapping.iter_mut() {
+                    instance.world_matrix = translate;
+                }
+            */
+
+            // TODO Add Size change
+            println!("Drawing is happening");
+            if size != &self.prev_size {
+                println!("Size changed");
+                // Is it big enough?
+                if *size == 1usize {
+                    println!("Only one die");
+                    match &self.dice[0].kind {
+                        DieKind::Four => {
+                            // Writing
+                            let point = Point3D::new(0.0, 0.0, 0.0);
+                            let translate = Matrix::new_translate(&point)
+                                                    .values()
+                                                    .to_owned();
+
+                            let one_die = vec![
+                                Attr { world_matrix: translate }
+                            ];
+
+                            println!("About to swap");
+                            self.four_per_instance = glium::VertexBuffer::dynamic(&self.context, &one_die).unwrap();
+                            println!("Swap finished");
+                        },
+                        DieKind::Six => {
+                            // Writing
+                            let point = Point3D::new(0.0, 0.0, 0.0);
+                            let translate = Matrix::new_translate(&point)
+                                                    .values()
+                                                    .to_owned();
+
+                            let one_die = vec![
+                                Attr { world_matrix: translate }
+                            ];
+
+                            println!("Six about to swap");
+                            self.six_per_instance = glium::VertexBuffer::dynamic(&self.context, &one_die).unwrap();
+                            println!("Six swap finished");
+
+                        },
+                        DieKind::Eight => {
+                            // Writing
+                            let point = Point3D::new(0.0, 0.0, 0.0);
+                            let translate = Matrix::new_translate(&point)
+                                                    .values()
+                                                    .to_owned();
+
+                            let one_die = vec![
+                                Attr { world_matrix: translate }
+                            ];
+
+                            println!("Six about to swap");
+                            self.eight_per_instance = glium::VertexBuffer::dynamic(&self.context, &one_die).unwrap();
+                            println!("Six swap finished");
+                        },
+                        DieKind::Ten => {
+                            let point = Point3D::new(0.0, 0.0, 0.0);
+                            let translate = Matrix::new_translate(&point)
+                                                    .values()
+                                                    .to_owned();
+
+                            let one_die = vec![
+                                Attr { world_matrix: translate }
+                            ];
+
+                            println!("Six about to swap");
+                            self.ten_per_instance = glium::VertexBuffer::dynamic(&self.context, &one_die).unwrap();
+                            println!("Six swap finished");
+                        },
+                        DieKind::Twelve => {
+                            let point = Point3D::new(0.0, 0.0, 0.0);
+                            let translate = Matrix::new_translate(&point)
+                                                    .values()
+                                                    .to_owned();
+
+                            let one_die = vec![
+                                Attr { world_matrix: translate }
+                            ];
+
+                            println!("Six about to swap");
+                            self.twelve_per_instance = glium::VertexBuffer::dynamic(&self.context, &one_die).unwrap();
+                            println!("Six swap finished");
+                        },
+                        DieKind::Twenty => {
+                            let point = Point3D::new(0.0, 0.0, 0.0);
+                            let translate = Matrix::new_translate(&point)
+                                                    .values()
+                                                    .to_owned();
+
+                            let one_die = vec![
+                                Attr { world_matrix: translate }
+                            ];
+
+                            println!("Six about to swap");
+                            self.twenty_per_instance = glium::VertexBuffer::dynamic(&self.context, &one_die).unwrap();
+                            println!("Six swap finished");
+                        },
+                    }
+
+                    self.prev_size = *size;
+                }
+                /* else if (size == 2) {
+                    s
+                } else if (size > 3) {
+                    // Is there a downscale?
+                    // Or is there a move?
+
+                }*/
+            }
+
+            // TODO Implement when glium can detect a Depth Buffer
+            /*
+            let params = glium::DrawParameters {
+                depth: glium::Depth {
+                    test: glium::draw_parameters::DepthTest::IfLess,
+                    write: true,
+                    .. Default::default()
+                },
+                .. Default::default()
+            };
+            */
+            let params = glium::DrawParameters::default();
+
+            // TODO Switch to this when with Depth Buffer
+            // frame.clear_color_and_depth((0., 0., 0., 0.), 1.0);
             frame.clear_color(0., 0., 0., 0.);
-            frame
-                .draw(
-                   (&self.four_vertex_buffer,
-                    &self.four_per_instance.per_instance().unwrap()),
-                    &self.four_index_buffer,
-                    &self.program,
-                    &uniforms,
-                    &Default::default(),
-                )
-                .unwrap();
-            frame
-                .draw(
-                   (&self.six_vertex_buffer,
-                    &self.six_per_instance.per_instance().unwrap()),
-                    &self.six_index_buffer,
-                    &self.program,
-                    &uniforms,
-                    &Default::default(),
-                )
-                .unwrap();
-            frame
-                .draw(
-                   (&self.eight_vertex_buffer,
-                    &self.eight_per_instance.per_instance().unwrap()),
-                    &self.eight_index_buffer,
-                    &self.program,
-                    &uniforms,
-                    &Default::default(),
-                )
-                .unwrap();
-            frame
-                .draw(
-                   (&self.ten_vertex_buffer,
-                    &self.ten_per_instance.per_instance().unwrap()),
-                    &self.ten_index_buffer,
-                    &self.program,
-                    &uniforms,
-                    &Default::default(),
-                )
-                .unwrap();
-            frame
-                .draw(
-                   (&self.twelve_vertex_buffer,
-                    &self.twelve_per_instance.per_instance().unwrap()),
-                    &self.twelve_index_buffer,
-                    &self.program,
-                    &uniforms,
-                    &Default::default(),
-                )
-                .unwrap();
-            frame
-                .draw(
-                   (&self.twenty_vertex_buffer,
-                    &self.twenty_per_instance.per_instance().unwrap()),
-                    &self.twenty_index_buffer,
-                    &self.program,
-                    &uniforms,
-                    &Default::default(),
-                )
-                .unwrap();
+
+            if !self.four_per_instance.len() > 0 {
+                frame
+                    .draw(
+                       (&self.four_vertex_buffer,
+                        self.four_per_instance.per_instance().unwrap()),
+                        &self.four_index_buffer,
+                        &self.program,
+                        &uniforms,
+                        &params,
+                    )
+                    .unwrap();
+            }
+
+            if !self.six_per_instance.len() > 0 {
+                frame
+                    .draw(
+                       (&self.six_vertex_buffer,
+                        self.six_per_instance.per_instance().unwrap()),
+                        &self.six_index_buffer,
+                        &self.program,
+                        &uniforms,
+                        &params,
+                    )
+                    .unwrap();
+            }
+
+            if !self.eight_per_instance.len() > 0 {
+                frame
+                    .draw(
+                       (&self.eight_vertex_buffer,
+                        self.eight_per_instance.per_instance().unwrap()),
+                        &self.eight_index_buffer,
+                        &self.program,
+                        &uniforms,
+                        &params,
+                    )
+                    .unwrap();
+            }
+
+            if !self.ten_per_instance.len() > 0 {
+                frame
+                    .draw(
+                       (&self.ten_vertex_buffer,
+                        self.ten_per_instance.per_instance().unwrap()),
+                        &self.ten_index_buffer,
+                        &self.program,
+                        &uniforms,
+                        &params,
+                    )
+                    .unwrap();
+            }
+
+            if !self.twelve_per_instance.len() > 0 {
+                frame
+                    .draw(
+                       (&self.twelve_vertex_buffer,
+                        self.twelve_per_instance.per_instance().unwrap()),
+                        &self.twelve_index_buffer,
+                        &self.program,
+                        &uniforms,
+                        &params,
+                    )
+                    .unwrap();
+            }
+
+            if !self.twenty_per_instance.len() > 0 {
+                frame
+                    .draw(
+                       (&self.twenty_vertex_buffer,
+                        self.twenty_per_instance.per_instance().unwrap()),
+                        &self.twenty_index_buffer,
+                        &self.program,
+                        &uniforms,
+                        &params,
+                    )
+                    .unwrap();
+            }
             frame.finish().unwrap();
         }
     }
@@ -773,8 +874,13 @@ mod imp {
         fn constructed(&self) {
             self.parent_constructed();
 
-            self.setup_click();
-            self.setup_flicking();
+            /* TODO Set Up Clicks & Flick
+                let press = Gtk::GestureClick::new();
+                press.connect_pressed(clone!(@weak obj => move |event, _, x, y| {
+
+                }));
+                self.setup_flicking();
+            */
         }
     }
 
@@ -798,6 +904,8 @@ mod imp {
                 unsafe { glium::backend::Context::new(widget.clone(), true, Default::default()) }
                     .unwrap();
 
+            println!("{:?}", context.get_opengl_version_string());
+
             *self.renderer.borrow_mut() = Some(Renderer::new(context));
         }
 
@@ -810,7 +918,7 @@ mod imp {
     impl GLAreaImpl for DiceArea {
         // Is a glib::Propagation in post 0.7 gtk, need to figure out how to update
         fn render(&self, _context: &gtk::gdk::GLContext) -> bool {
-            self.renderer.borrow().as_ref().unwrap().draw();
+            self.renderer.borrow_mut().as_mut().unwrap().draw();
             false
         }
 
@@ -835,15 +943,6 @@ mod imp {
 
     }
 }
-
-
-
-
-
-
-
-
-
 
 
 glib::wrapper! {
@@ -898,29 +997,88 @@ impl DiceArea {
     }
 
     pub fn start_roll(&self) {
-        let imp = self.imp();
-        let obj = self.obj();
 
-        let binding = imp.renderer.borrow();
-        let mut roll = binding.as_ref().unwrap().roll.borrow_mut();
-        *roll = Some(Instant::now());
     }
 
     pub fn add_four(&self) {
         let imp = self.imp();
-        let renderer = imp.renderer.borrow();
-        let dice = renderer.as_ref().unwrap().roll.borrow_mut();
+
+        let mut binding = imp.renderer.borrow_mut();
+        if let Some(renderer) = binding.as_mut() {
+            renderer.dice.push(Die::new(DieKind::Four));
+        } else {
+            println!("Renderer doesn't exist");
+        }
     }
 
-    pub fn add_six(&self) {}
-    pub fn add_ten(&self) {}
-    pub fn add_twelve(&self) {}
-    pub fn add_twenty(&self) {}
+    pub fn add_six(&self) {
+        let imp = self.imp();
+
+        let mut binding = imp.renderer.borrow_mut();
+        if let Some(renderer) = binding.as_mut() {
+            renderer.dice.push(Die::new(DieKind::Six));
+        } else {
+            println!("Renderer doesn't exist");
+        }
+    }
+
+    pub fn add_eight(&self) {
+        let imp = self.imp();
+
+        let mut binding = imp.renderer.borrow_mut();
+        if let Some(renderer) = binding.as_mut() {
+            renderer.dice.push(Die::new(DieKind::Eight));
+        } else {
+            println!("Renderer doesn't exist");
+        }
+    }
+
+    pub fn add_ten(&self) {
+        let imp = self.imp();
+
+        let mut binding = imp.renderer.borrow_mut();
+        if let Some(renderer) = binding.as_mut() {
+            renderer.dice.push(Die::new(DieKind::Ten));
+        } else {
+            println!("Renderer doesn't exist");
+        }
+    }
+    pub fn add_twelve(&self) {
+        let imp = self.imp();
+
+        let mut binding = imp.renderer.borrow_mut();
+        if let Some(renderer) = binding.as_mut() {
+            renderer.dice.push(Die::new(DieKind::Twelve));
+        } else {
+            println!("Renderer doesn't exist");
+        }
+    }
+
+    pub fn add_twenty(&self) {
+        let imp = self.imp();
+
+        let mut binding = imp.renderer.borrow_mut();
+        if let Some(renderer) = binding.as_mut() {
+            renderer.dice.push(Die::new(DieKind::Twenty));
+        } else {
+            println!("Renderer doesn't exist");
+        }
+    }
 
     pub fn roll(&self) {
+        let imp = self.imp();
 
+        let mut binding = imp.renderer.borrow_mut();
+        if let Some(renderer) = binding.as_mut() {
+            for die in renderer.dice.iter_mut() {
+                die.roll();
+            }
+        } else {
+            println!("Renderer doesn't exist");
+        }
     }
 
+    /* TODO Broken
     pub fn remove_die(&self, x: f64, y: f64) -> AnimatedRemove {
         let remove = AnimatedRemove::new();
 
@@ -940,9 +1098,8 @@ impl DiceArea {
         }));
 
         self.imp().dice.borrow_mut().insert(remove.clone());
-
         frame_clock.begin_updating();
-    }
+    } */
 
     pub fn start_tick(&self) {
         self.add_tick_callback(|s, _| {

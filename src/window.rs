@@ -86,6 +86,8 @@ impl DiceWindow {
     #[template_callback]
     fn handle_four_clicked(&self) {
         println!("Four clicked");
+        let imp = &self.imp();
+        imp.dice_area.add_four();
     }
 
     #[template_callback]
@@ -93,27 +95,33 @@ impl DiceWindow {
         println!("Six clicked");
         let imp = &self.imp();
         imp.dice_area.add_six();
-
-        println!("Six finished");
     }
 
     #[template_callback]
     fn handle_eight_clicked(&self) {
         println!("Eight clicked");
+        let imp = &self.imp();
+        imp.dice_area.add_eight();
     }
 
     #[template_callback]
     fn handle_ten_clicked(&self) {
         println!("Ten clicked");
+        let imp = &self.imp();
+        imp.dice_area.add_ten();
     }
 
     #[template_callback]
     fn handle_twelve_clicked(&self) {
         println!("Twelve clicked");
+        let imp = &self.imp();
+        imp.dice_area.add_twelve();
     }
 
     #[template_callback]
     fn handle_twenty_clicked(&self) {
         println!("Twenty clicked");
+        let imp = &self.imp();
+        imp.dice_area.add_twenty();
     }
 }

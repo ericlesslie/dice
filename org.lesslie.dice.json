@@ -21,7 +21,8 @@
         ],
         "env" : {
             "RUST_BACKTRACE" : "1",
-            "RUST_LOG" : "dice=debug"
+            "RUST_LOG" : "dice=debug",
+            "GDK_DEBUG" : "gl-prefer-gl"
         }
     },
     "cleanup" : [
