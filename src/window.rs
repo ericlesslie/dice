@@ -24,6 +24,8 @@ use gtk::{gio, glib};
 
 use crate::dice_area::DiceArea;
 
+use std::time::Duration;
+
 mod imp {
     use super::*;
 
@@ -63,7 +65,13 @@ mod imp {
         }
     }
 
-    impl ObjectImpl for DiceWindow {}
+    impl ObjectImpl for DiceWindow {
+        fn constructed(&self) {
+            self.parent_constructed();
+
+            self.dice_area.set_has_depth_buffer(true);
+        }
+    }
     impl WidgetImpl for DiceWindow {}
     impl WindowImpl for DiceWindow {}
     impl ApplicationWindowImpl for DiceWindow {}

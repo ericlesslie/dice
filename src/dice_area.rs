@@ -4,9 +4,6 @@ use gtk::{gdk, glib, prelude::*, subclass::prelude::*};
 // TODO Use Die Crate
 use crate::die::{Die, DieKind};
 
-// For Testing
-use gl::*;
-
 mod imp {
 
     use std::{cell::RefCell, /* time::Instant, f32::consts::PI, */ rc::Rc};
@@ -528,30 +525,6 @@ mod imp {
                 // perfectly fine; anything else will error out, and you can catch that error and fall
                 // back to something else. This example simply unwrap()s on error and does not
                 // implement a fallback or error reporting.
-                140 => {
-                    vertex: "
-                        #version 140
-                        in mat4 world_matrix;
-                        uniform mat4 perspective;
-
-                        in vec3 position;
-                        in vec3 color;
-                        out vec3 vColor;
-                        void main() {
-                            gl_Position = vec4(position, 1.0) * world_matrix * perspective;
-                            vColor = color;
-                        }
-                    ",
-
-                    fragment: "
-                        #version 140
-                        in vec3 vColor;
-                        out vec4 f_color;
-                        void main() {
-                            f_color = vec4(vColor, 1.0);
-                        }
-                    "
-                },
                 300 es => {
                     vertex: "
                         #version 300 es
@@ -574,6 +547,33 @@ mod imp {
                         precision mediump float;
                         in vec3 vColor;
 
+                        out vec4 f_color;
+                        void main() {
+                            f_color = vec4(vColor, 1.0);
+                        }
+                    "
+                },
+                150 => {
+                    vertex: "
+                        #version 150
+                        in mat4 world_matrix;
+                        uniform mat4 perspective;
+
+                        in vec3 position;
+                        in vec3 color;
+
+                        out vec3 vColor;
+                        out vec3 v_normal
+
+                        void main() {
+                            gl_Position = vec4(position, 1.0) * world_matrix * perspective;
+                            vColor = color;
+                        }
+                    ",
+
+                    fragment: "
+                        #version 150
+                        in vec3 vColor;
                         out vec4 f_color;
                         void main() {
                             f_color = vec4(vColor, 1.0);
@@ -652,7 +652,6 @@ mod imp {
             */
 
             // TODO Add Size change
-            println!("Drawing is happening");
             if size != &self.prev_size {
                 println!("Size changed");
                 // Is it big enough?
@@ -774,8 +773,7 @@ mod imp {
             let params = glium::DrawParameters::default();
 
             // TODO Switch to this when with Depth Buffer
-            // frame.clear_color_and_depth((0., 0., 0., 0.), 1.0);
-            frame.clear_color(0., 0., 0., 0.);
+            frame.clear_color_and_depth((0., 0., 0., 0.), 1.0);
 
             if !self.four_per_instance.len() > 0 {
                 frame
@@ -873,6 +871,11 @@ mod imp {
     impl ObjectImpl for DiceArea {
         fn constructed(&self) {
             self.parent_constructed();
+
+            self.obj().add_tick_callback(|widget, _clock| {
+                widget.queue_draw();
+                glib::ControlFlow::Continue
+            });
 
             /* TODO Set Up Clicks & Flick
                 let press = Gtk::GestureClick::new();
