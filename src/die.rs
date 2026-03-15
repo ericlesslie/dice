@@ -2,7 +2,7 @@ use rand::prelude::*;
 use std::time::Instant;
 use std::cell::Cell;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum DieKind {
     Four,
     Six,

@@ -13,7 +13,6 @@ mod imp {
     };
     use gtk::{glib, prelude::*, subclass::prelude::*};
 
-    use graphene::{Point3D, Matrix};
     use crate::die::{Die, DieKind};
 
     #[derive(Copy, Clone)]
@@ -60,6 +59,7 @@ mod imp {
 
         pub dice: Vec<Die>,
         prev_size: usize,
+        die_screen_positions: Vec<(f32, f32, usize)>,
     }
 
     impl Renderer {
@@ -385,68 +385,67 @@ mod imp {
                 1, 2, 3,
             ];
 
-            // Pentagonal faces, 3 triangles per face
+            // Pentagonal faces, 3 triangles per face (fan triangulation)
             let twelve_indices: [u16; 108] = [
-                // Face 1
-                0, 1, 9,
-                0, 1, 14,
-                0, 14, 13,
+                // Face 1: 0, 8, 1, 13, 12
+                0, 8, 1,
+                0, 1, 13,
+                0, 13, 12,
 
-                // Face 2
-                0, 13, 3,
-                0, 3,  19,
-                0, 19, 18,
+                // Face 2: 0, 8, 9, 2, 16
+                0, 8, 9,
+                0, 9, 2,
+                0, 2, 16,
 
-                // Face 3
-                0, 17, 2,
-                0, 2, 10,
-                0, 10, 9,
+                // Face 3: 0, 12, 3, 18, 16
+                0, 12, 3,
+                0, 3, 18,
+                0, 18, 16,
 
-                // Face 4
-                8, 7, 20,
-                8, 7, 11,
-                8, 11, 12,
+                // Face 4: 1, 17, 4, 9, 8
+                1, 17, 4,
+                1, 4, 9,
+                1, 9, 8,
 
-                // Face 5
-                8, 12, 6,
-                8, 6, 15,
-                8, 15, 16,
+                // Face 5: 1, 13, 6, 19, 17
+                1, 13, 6,
+                1, 6, 19,
+                1, 19, 17,
 
-                // Face 6
-                8, 16, 5,
-                8, 5, 18,
-                8, 18, 20,
+                // Face 6: 2, 14, 5, 18, 16
+                2, 14, 5,
+                2, 5, 18,
+                2, 18, 16,
 
-                // Face 7
-                20, 18, 4,
-                20, 4, 14,
-                20, 14, 7,
+                // Face 7: 2, 14, 15, 4, 9
+                2, 14, 15,
+                2, 15, 4,
+                2, 4, 9,
 
-                // Face 8
-                11, 7, 14,
-                11, 14, 13,
-                11, 13, 3,
+                // Face 8: 3, 10, 6, 13, 12
+                3, 10, 6,
+                3, 6, 13,
+                3, 13, 12,
 
-                // Face 9
-                11, 3, 19,
-                11, 19, 6,
-                11, 6, 12,
+                // Face 9: 3, 10, 11, 5, 18
+                3, 10, 11,
+                3, 11, 5,
+                3, 5, 18,
 
-                // Face 10
-                15, 6, 19,
-                15, 19, 17,
-                15, 17, 2,
+                // Face 10: 7, 11, 10, 6, 19
+                7, 11, 10,
+                7, 10, 6,
+                7, 6, 19,
 
-                // Face 11
-                15, 2, 10,
-                15, 10, 5,
-                15, 5, 16,
+                // Face 11: 7, 15, 4, 17, 19
+                7, 15, 4,
+                7, 4, 17,
+                7, 17, 19,
 
-                // Face 12
-                5, 10, 9,
-                5, 9, 4,
-                5, 4, 18
-
+                // Face 12: 7, 11, 5, 14, 15
+                7, 11, 5,
+                7, 5, 14,
+                7, 14, 15,
             ];
 
             let twenty_indices: [u16; 60] = [
@@ -535,10 +534,13 @@ mod imp {
                         in vec3 position;
                         in vec3 color;
                         out vec3 vColor;
+                        out vec3 vPosition;
 
                         void main() {
-                            gl_Position = vec4(position, 1.0) * world_matrix * perspective;
+                            vec4 worldPos = vec4(position, 1.0) * world_matrix;
+                            gl_Position = worldPos * perspective;
                             vColor = color;
+                            vPosition = worldPos.xyz;
                         }
                     ",
 
@@ -546,10 +548,16 @@ mod imp {
                         #version 300 es
                         precision mediump float;
                         in vec3 vColor;
+                        in vec3 vPosition;
 
                         out vec4 f_color;
                         void main() {
-                            f_color = vec4(vColor, 1.0);
+                            vec3 normal = normalize(cross(dFdx(vPosition), dFdy(vPosition)));
+                            vec3 lightDir = normalize(vec3(0.3, 0.5, 1.0));
+                            float diffuse = abs(dot(normal, lightDir));
+                            float ambient = 0.3;
+                            float lighting = ambient + (1.0 - ambient) * diffuse;
+                            f_color = vec4(vColor * lighting, 1.0);
                         }
                     "
                 },
@@ -563,20 +571,28 @@ mod imp {
                         in vec3 color;
 
                         out vec3 vColor;
-                        out vec3 v_normal;
+                        out vec3 vPosition;
 
                         void main() {
-                            gl_Position = vec4(position, 1.0) * world_matrix * perspective;
+                            vec4 worldPos = vec4(position, 1.0) * world_matrix;
+                            gl_Position = worldPos * perspective;
                             vColor = color;
+                            vPosition = worldPos.xyz;
                         }
                     ",
 
                     fragment: "
                         #version 150
                         in vec3 vColor;
+                        in vec3 vPosition;
                         out vec4 f_color;
                         void main() {
-                            f_color = vec4(vColor, 1.0);
+                            vec3 normal = normalize(cross(dFdx(vPosition), dFdy(vPosition)));
+                            vec3 lightDir = normalize(vec3(0.3, 0.5, 1.0));
+                            float diffuse = abs(dot(normal, lightDir));
+                            float ambient = 0.3;
+                            float lighting = ambient + (1.0 - ambient) * diffuse;
+                            f_color = vec4(vColor * lighting, 1.0);
                         }
                     "
                 },
@@ -609,6 +625,7 @@ mod imp {
                 twenty_per_instance,
                 dice,
                 prev_size,
+                die_screen_positions: Vec::new(),
             }
         }
 
@@ -651,112 +668,92 @@ mod imp {
                 }
             */
 
-            // TODO Add Size change
             if size != &self.prev_size {
-                println!("Size changed");
-                // Is it big enough?
-                if *size == 1usize {
-                    println!("Only one die");
-                    match &self.dice[0].kind {
-                        DieKind::Four => {
-                            // Writing
-                            let point = Point3D::new(0.0, 0.0, 0.0);
-                            let translate = Matrix::new_translate(&point)
-                                                    .values()
-                                                    .to_owned();
+                let n = *size;
+                let viewport_width = 1.8f32;
+                let base_scale = 0.4f32;
 
-                            let one_die = vec![
-                                Attr { world_matrix: translate }
-                            ];
+                // Flexbox-style: scale down as more dice are added
+                let scale = if n <= 1 {
+                    base_scale
+                } else {
+                    base_scale.min(viewport_width / (n as f32 * 2.0))
+                };
 
-                            println!("About to swap");
-                            self.four_per_instance = glium::VertexBuffer::dynamic(&self.context, &one_die).unwrap();
-                            println!("Swap finished");
-                        },
-                        DieKind::Six => {
-                            // Writing
-                            let point = Point3D::new(0.0, 0.0, 0.0);
-                            let translate = Matrix::new_translate(&point)
-                                                    .values()
-                                                    .to_owned();
+                let slot_width = if n <= 1 { 0.0 } else { viewport_width / n as f32 };
+                let start_x = -(n as f32 - 1.0) * slot_width / 2.0;
 
-                            let one_die = vec![
-                                Attr { world_matrix: translate }
-                            ];
+                let mut four_instances: Vec<Attr> = Vec::new();
+                let mut six_instances: Vec<Attr> = Vec::new();
+                let mut eight_instances: Vec<Attr> = Vec::new();
+                let mut ten_instances: Vec<Attr> = Vec::new();
+                let mut twelve_instances: Vec<Attr> = Vec::new();
+                let mut twenty_instances: Vec<Attr> = Vec::new();
 
-                            println!("Six about to swap");
-                            self.six_per_instance = glium::VertexBuffer::dynamic(&self.context, &one_die).unwrap();
-                            println!("Six swap finished");
+                let (width, height) = self.context.get_framebuffer_dimensions();
+                let aspect_ratio = height as f32 / width as f32;
 
-                        },
-                        DieKind::Eight => {
-                            // Writing
-                            let point = Point3D::new(0.0, 0.0, 0.0);
-                            let translate = Matrix::new_translate(&point)
-                                                    .values()
-                                                    .to_owned();
+                self.die_screen_positions.clear();
 
-                            let one_die = vec![
-                                Attr { world_matrix: translate }
-                            ];
+                for (i, die) in self.dice.iter().enumerate() {
+                    let x = start_x + i as f32 * slot_width;
 
-                            println!("Six about to swap");
-                            self.eight_per_instance = glium::VertexBuffer::dynamic(&self.context, &one_die).unwrap();
-                            println!("Six swap finished");
-                        },
-                        DieKind::Ten => {
-                            let point = Point3D::new(0.0, 0.0, 0.0);
-                            let translate = Matrix::new_translate(&point)
-                                                    .values()
-                                                    .to_owned();
+                    // Each Rust sub-array = one GLSL column (vec * mat convention)
+                    // Translation goes in index 3 of the relevant column
+                    let world: [[f32; 4]; 4] = [
+                        [scale, 0.0,   0.0,   x  ],
+                        [0.0,   scale, 0.0,   0.0],
+                        [0.0,   0.0,   scale, 0.0],
+                        [0.0,   0.0,   0.0,   1.0],
+                    ];
 
-                            let one_die = vec![
-                                Attr { world_matrix: translate }
-                            ];
+                    let screen_x = (x * aspect_ratio + 1.0) / 2.0 * width as f32;
+                    let screen_y = height as f32 / 2.0;
+                    self.die_screen_positions.push((screen_x, screen_y, i));
 
-                            println!("Six about to swap");
-                            self.ten_per_instance = glium::VertexBuffer::dynamic(&self.context, &one_die).unwrap();
-                            println!("Six swap finished");
-                        },
-                        DieKind::Twelve => {
-                            let point = Point3D::new(0.0, 0.0, 0.0);
-                            let translate = Matrix::new_translate(&point)
-                                                    .values()
-                                                    .to_owned();
-
-                            let one_die = vec![
-                                Attr { world_matrix: translate }
-                            ];
-
-                            println!("Six about to swap");
-                            self.twelve_per_instance = glium::VertexBuffer::dynamic(&self.context, &one_die).unwrap();
-                            println!("Six swap finished");
-                        },
-                        DieKind::Twenty => {
-                            let point = Point3D::new(0.0, 0.0, 0.0);
-                            let translate = Matrix::new_translate(&point)
-                                                    .values()
-                                                    .to_owned();
-
-                            let one_die = vec![
-                                Attr { world_matrix: translate }
-                            ];
-
-                            println!("Six about to swap");
-                            self.twenty_per_instance = glium::VertexBuffer::dynamic(&self.context, &one_die).unwrap();
-                            println!("Six swap finished");
-                        },
+                    let attr = Attr { world_matrix: world };
+                    match die.kind {
+                        DieKind::Four => four_instances.push(attr),
+                        DieKind::Six => six_instances.push(attr),
+                        DieKind::Eight => eight_instances.push(attr),
+                        DieKind::Ten => ten_instances.push(attr),
+                        DieKind::Twelve => twelve_instances.push(attr),
+                        DieKind::Twenty => twenty_instances.push(attr),
                     }
-
-                    self.prev_size = *size;
                 }
-                /* else if (size == 2) {
-                    s
-                } else if (size > 3) {
-                    // Is there a downscale?
-                    // Or is there a move?
 
-                }*/
+                self.four_per_instance = if four_instances.is_empty() {
+                    VertexBuffer::empty_dynamic(&self.context, 0).unwrap()
+                } else {
+                    VertexBuffer::dynamic(&self.context, &four_instances).unwrap()
+                };
+                self.six_per_instance = if six_instances.is_empty() {
+                    VertexBuffer::empty_dynamic(&self.context, 0).unwrap()
+                } else {
+                    VertexBuffer::dynamic(&self.context, &six_instances).unwrap()
+                };
+                self.eight_per_instance = if eight_instances.is_empty() {
+                    VertexBuffer::empty_dynamic(&self.context, 0).unwrap()
+                } else {
+                    VertexBuffer::dynamic(&self.context, &eight_instances).unwrap()
+                };
+                self.ten_per_instance = if ten_instances.is_empty() {
+                    VertexBuffer::empty_dynamic(&self.context, 0).unwrap()
+                } else {
+                    VertexBuffer::dynamic(&self.context, &ten_instances).unwrap()
+                };
+                self.twelve_per_instance = if twelve_instances.is_empty() {
+                    VertexBuffer::empty_dynamic(&self.context, 0).unwrap()
+                } else {
+                    VertexBuffer::dynamic(&self.context, &twelve_instances).unwrap()
+                };
+                self.twenty_per_instance = if twenty_instances.is_empty() {
+                    VertexBuffer::empty_dynamic(&self.context, 0).unwrap()
+                } else {
+                    VertexBuffer::dynamic(&self.context, &twenty_instances).unwrap()
+                };
+
+                self.prev_size = *size;
             }
 
             // TODO Implement when glium can detect a Depth Buffer
@@ -775,7 +772,7 @@ mod imp {
             // TODO Switch to this when with Depth Buffer
             frame.clear_color_and_depth((0., 0., 0., 0.), 1.0);
 
-            if !self.four_per_instance.len() > 0 {
+            if self.four_per_instance.len() > 0 {
                 frame
                     .draw(
                        (&self.four_vertex_buffer,
@@ -788,7 +785,7 @@ mod imp {
                     .unwrap();
             }
 
-            if !self.six_per_instance.len() > 0 {
+            if self.six_per_instance.len() > 0 {
                 frame
                     .draw(
                        (&self.six_vertex_buffer,
@@ -801,7 +798,7 @@ mod imp {
                     .unwrap();
             }
 
-            if !self.eight_per_instance.len() > 0 {
+            if self.eight_per_instance.len() > 0 {
                 frame
                     .draw(
                        (&self.eight_vertex_buffer,
@@ -814,7 +811,7 @@ mod imp {
                     .unwrap();
             }
 
-            if !self.ten_per_instance.len() > 0 {
+            if self.ten_per_instance.len() > 0 {
                 frame
                     .draw(
                        (&self.ten_vertex_buffer,
@@ -827,7 +824,7 @@ mod imp {
                     .unwrap();
             }
 
-            if !self.twelve_per_instance.len() > 0 {
+            if self.twelve_per_instance.len() > 0 {
                 frame
                     .draw(
                        (&self.twelve_vertex_buffer,
@@ -840,7 +837,7 @@ mod imp {
                     .unwrap();
             }
 
-            if !self.twenty_per_instance.len() > 0 {
+            if self.twenty_per_instance.len() > 0 {
                 frame
                     .draw(
                        (&self.twenty_vertex_buffer,
@@ -877,13 +874,35 @@ mod imp {
                 glib::ControlFlow::Continue
             });
 
-            /* TODO Set Up Clicks & Flick
-                let press = Gtk::GestureClick::new();
-                press.connect_pressed(clone!(@weak obj => move |event, _, x, y| {
+            let click = gtk::GestureClick::new();
+            click.connect_pressed(glib::clone!(@weak self as this => move |_gesture, _n, x, y| {
+                let widget = this.obj();
+                let scale = widget.scale_factor() as f32;
+                let click_x = x as f32 * scale;
+                let click_y = y as f32 * scale;
 
-                }));
-                self.setup_flicking();
-            */
+                let mut binding = this.renderer.borrow_mut();
+                if let Some(renderer) = binding.as_mut() {
+                    let threshold = 80.0f32;
+                    let mut closest: Option<(f32, usize)> = None;
+
+                    for &(sx, sy, idx) in &renderer.die_screen_positions {
+                        let dist = ((click_x - sx).powi(2) + (click_y - sy).powi(2)).sqrt();
+                        if dist < threshold {
+                            if closest.is_none() || dist < closest.unwrap().0 {
+                                closest = Some((dist, idx));
+                            }
+                        }
+                    }
+
+                    if let Some((_, idx)) = closest {
+                        if idx < renderer.dice.len() {
+                            renderer.dice.remove(idx);
+                        }
+                    }
+                }
+            }));
+            self.obj().add_controller(click);
         }
     }
 
@@ -924,25 +943,6 @@ mod imp {
             self.renderer.borrow_mut().as_mut().unwrap().draw();
             false
         }
-
-        /*
-        fn setup_click(&self) {
-            let click_controller = gtk::GestureClick::new();
-
-            click_controller.connect_pressed(|click_controller, _, x, y| {
-                let dice_area = click_controller
-                    .widget()
-                    .dynamic_cast::<super::DiceArea>()
-                    .expect("pressed event is not on the Dice Area");
-
-                dice_area.remove()
-            });
-
-            self.obj().add_controller(click_controller);
-        }
-
-        */
-
 
     }
 }
@@ -1080,29 +1080,6 @@ impl DiceArea {
             println!("Renderer doesn't exist");
         }
     }
-
-    /* TODO Broken
-    pub fn remove_die(&self, x: f64, y: f64) -> AnimatedRemove {
-        let remove = AnimatedRemove::new();
-
-        // Shamelessly stolen from confetti snapshot
-        let frame_clock = self.frame_clock().unwrap();
-
-        frame_clock.connect_update(clone!(@weak self as this, @weak exp => move |clock| {
-            match remove.update(clock) {
-                ControlFlow::Continue => {
-                    this.queue_draw();
-                },
-                ControlFlow::Break => {
-                    this.imp().dice.borrow_mut().remove();
-                    clock.end_updating();
-                }
-            }
-        }));
-
-        self.imp().dice.borrow_mut().insert(remove.clone());
-        frame_clock.begin_updating();
-    } */
 
     pub fn start_tick(&self) {
         self.add_tick_callback(|s, _| {
