@@ -1,5 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="dice">
 	<schema id="org.lesslie.dice" path="/org/lesslie/dice/">
+		<key name="color-d4" type="s">
+			<default>'#2EC27E'</default>
+			<summary>D4 die color</summary>
+		</key>
+		<key name="color-d6" type="s">
+			<default>'#1C71D8'</default>
+			<summary>D6 die color</summary>
+		</key>
+		<key name="color-d8" type="s">
+			<default>'#813D9C'</default>
+			<summary>D8 die color</summary>
+		</key>
+		<key name="color-d10" type="s">
+			<default>'#C01C28'</default>
+			<summary>D10 die color</summary>
+		</key>
+		<key name="color-d12" type="s">
+			<default>'#F5C211'</default>
+			<summary>D12 die color</summary>
+		</key>
+		<key name="color-d20" type="s">
+			<default>'#E66100'</default>
+			<summary>D20 die color</summary>
+		</key>
+		<key name="rng-algorithm" type="s">
+			<default>'chacha'</default>
+			<summary>Random number generator algorithm</summary>
+			<description>One of: chacha, stdrng, smallrng</description>
+		</key>
 	</schema>
 </schemalist>

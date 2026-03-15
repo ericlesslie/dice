@@ -23,6 +23,7 @@ mod config;
 mod window;
 mod dice_area;
 mod die;
+mod preferences;
 
 use self::application::DiceApplication;
 use self::window::DiceWindow;
@@ -69,6 +70,16 @@ fn main() -> glib::ExitCode {
     let resources = gio::Resource::load(&resource_path)
         .expect("Could not load resources");
     gio::resources_register(&resources);
+
+    // Point at the build dir schema for dev builds
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            let schema_dir = dir.join("../../data");
+            if schema_dir.join("gschemas.compiled").exists() {
+                std::env::set_var("GSETTINGS_SCHEMA_DIR", &schema_dir);
+            }
+        }
+    }
 
     // Create a new GtkApplication. The application manages our main loop,
     // application windows, integration with the window manager/compositor, and

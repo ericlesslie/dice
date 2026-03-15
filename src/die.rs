@@ -1,6 +1,17 @@
 use rand::prelude::*;
+use rand::{rngs::{StdRng, SmallRng}, SeedableRng};
+use gtk::{gio, prelude::*};
 use std::time::Instant;
 use std::cell::Cell;
+
+fn make_rng() -> Box<dyn RngCore> {
+    let settings = gio::Settings::new("org.lesslie.dice");
+    match settings.string("rng-algorithm").as_str() {
+        "stdrng" => Box::new(StdRng::from_entropy()),
+        "smallrng" => Box::new(SmallRng::from_entropy()),
+        _ => Box::new(thread_rng()),
+    }
+}
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum DieKind {
@@ -25,7 +36,7 @@ pub struct Die {
 
 impl Die {
     pub fn new(kind: DieKind) -> Self {
-        let mut rng = thread_rng();
+        let mut rng = make_rng();
         let val = Self::generate_roll(kind);
         let spin_seed = [
             rng.gen_range(2..=5),
@@ -44,7 +55,7 @@ impl Die {
     }
 
     pub fn roll(&self) {
-        let mut rng = thread_rng();
+        let mut rng = make_rng();
         self.time.set(Some(Instant::now()));
         self.val.set(Self::generate_roll(self.kind));
         self.spin_seed.set([
@@ -55,7 +66,7 @@ impl Die {
     }
 
     fn generate_roll(kind: DieKind) -> u32 {
-        let mut rng = thread_rng();
+        let mut rng = make_rng();
 
         match kind {
             DieKind::Four => rng.gen_range(1..=4),

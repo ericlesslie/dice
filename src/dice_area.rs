@@ -1,26 +1,24 @@
 use gtk::{gdk, glib, prelude::*, subclass::prelude::*};
-// use std::{time::Instant};
 
-// TODO Use Die Crate
 use crate::die::{Die, DieKind};
 
 mod imp {
 
-    use std::{cell::RefCell, rc::Rc, f32::consts::PI};
+    use std::{cell::{Cell, RefCell}, rc::Rc, f32::consts::PI};
     use glium::{
         implement_vertex, index::PrimitiveType, program, uniform, Frame, IndexBuffer, Surface,
         VertexBuffer
     };
-    use gtk::{glib, prelude::*, subclass::prelude::*};
+    use gtk::{gio, glib, prelude::*, subclass::prelude::*};
 
     use crate::die::{Die, DieKind};
+    use crate::preferences::hex_to_rgb;
 
     #[derive(Copy, Clone)]
     struct Vertex {
         position: [f32; 3],
-        color: [f32; 3],
     }
-    implement_vertex!(Vertex, position, color);
+    implement_vertex!(Vertex, position);
 
     #[derive(Copy, Clone)]
     struct Attr {
@@ -238,6 +236,7 @@ mod imp {
         prev_size: usize,
         prev_dimensions: (u32, u32),
         pub die_screen_positions: Vec<(f32, f32, usize)>,
+        colors: [[f32; 3]; 6],
     }
 
     impl Renderer {
@@ -251,22 +250,10 @@ mod imp {
             let four_vertex_buffer = VertexBuffer::new(
                 &context,
                 &[
-                    Vertex {
-                        position: [0.5, 0.5, 0.5],
-                        color: [0.180, 0.761, 0.494],
-                    },
-                    Vertex {
-                        position: [0.5, -0.5, -0.5],
-                        color: [0.180, 0.761, 0.494],
-                    },
-                    Vertex {
-                        position: [-0.5, 0.5, -0.5],
-                        color: [0.180, 0.761, 0.494],
-                    },
-                    Vertex {
-                        position: [-0.5, -0.5, 0.5],
-                        color: [0.180, 0.761, 0.494],
-                    },
+                    Vertex { position: [0.5, 0.5, 0.5] },
+                    Vertex { position: [0.5, -0.5, -0.5] },
+                    Vertex { position: [-0.5, 0.5, -0.5] },
+                    Vertex { position: [-0.5, -0.5, 0.5] },
                 ],
             )
             .unwrap();
@@ -275,38 +262,14 @@ mod imp {
             let six_vertex_buffer = VertexBuffer::new(
                 &context,
                 &[
-                    Vertex {
-                        position: [-0.5, -0.5, -0.5],
-                        color: [0.110, 0.443, 0.847],
-                    },
-                    Vertex {
-                        position: [0.5, -0.5, -0.5],
-                        color: [0.110, 0.443, 0.847],
-                    },
-                    Vertex {
-                        position: [0.5, 0.5, -0.5],
-                        color: [0.110, 0.443, 0.847],
-                    },
-                    Vertex {
-                        position: [-0.5, 0.5, -0.5],
-                        color: [0.110, 0.443, 0.847],
-                    },
-                    Vertex {
-                        position: [-0.5, -0.5, 0.5],
-                        color: [0.110, 0.443, 0.847],
-                    },
-                    Vertex {
-                        position: [0.5, -0.5, 0.5],
-                        color: [0.110, 0.443, 0.847],
-                    },
-                    Vertex {
-                        position: [0.5, 0.5, 0.5],
-                        color: [0.110, 0.443, 0.847],
-                    },
-                    Vertex {
-                        position: [-0.5, 0.5, 0.5],
-                        color: [0.110, 0.443, 0.847],
-                    },
+                    Vertex { position: [-0.5, -0.5, -0.5] },
+                    Vertex { position: [0.5, -0.5, -0.5] },
+                    Vertex { position: [0.5, 0.5, -0.5] },
+                    Vertex { position: [-0.5, 0.5, -0.5] },
+                    Vertex { position: [-0.5, -0.5, 0.5] },
+                    Vertex { position: [0.5, -0.5, 0.5] },
+                    Vertex { position: [0.5, 0.5, 0.5] },
+                    Vertex { position: [-0.5, 0.5, 0.5] },
                 ],
             )
             .unwrap();
@@ -314,51 +277,31 @@ mod imp {
             let eight_vertex_buffer = VertexBuffer::new(
                 &context,
                 &[
-                    Vertex {
-                        position: [0.5, 0., 0.],
-                        color: [0.506, 0.239, 0.612],
-                    },
-                    Vertex {
-                        position: [-0.5, 0., 0.],
-                        color: [0.506, 0.239, 0.612],
-                    },
-                    Vertex {
-                        position: [0., 0.5, 0.],
-                        color: [0.506, 0.239, 0.612],
-                    },
-                    Vertex {
-                        position: [0., -0.5, 0.],
-                        color: [0.506, 0.239, 0.612],
-                    },
-                    Vertex {
-                        position: [0., 0., 0.5],
-                        color: [0.506, 0.239, 0.612],
-                    },
-                    Vertex {
-                        position: [0., 0., -0.5],
-                        color: [0.506, 0.239, 0.612],
-                    },
+                    Vertex { position: [0.5, 0., 0.] },
+                    Vertex { position: [-0.5, 0., 0.] },
+                    Vertex { position: [0., 0.5, 0.] },
+                    Vertex { position: [0., -0.5, 0.] },
+                    Vertex { position: [0., 0., 0.5] },
+                    Vertex { position: [0., 0., -0.5] },
                 ],
             )
             .unwrap();
 
             // Pentagonal trapezohedron (D10)
             // 2 apex vertices + 2 rings of 5 vertices each
-            let ten_color: [f32; 3] = [0.753, 0.110, 0.157];
             let ten_radius: f32 = 0.5;
             let ten_upper_y: f32 = 0.0792;
             let ten_lower_y: f32 = -0.0792;
             let mut ten_verts: Vec<Vertex> = Vec::with_capacity(12);
             // Vertex 0: top apex
-            ten_verts.push(Vertex { position: [0.0, 0.75, 0.0], color: ten_color });
+            ten_verts.push(Vertex { position: [0.0, 0.75, 0.0] });
             // Vertex 1: bottom apex
-            ten_verts.push(Vertex { position: [0.0, -0.75, 0.0], color: ten_color });
+            ten_verts.push(Vertex { position: [0.0, -0.75, 0.0] });
             // Vertices 2-6: upper ring (y=0.2, angles 0, 72, 144, 216, 288)
             for i in 0..5u32 {
                 let angle = (i as f32) * 2.0 * PI / 5.0;
                 ten_verts.push(Vertex {
                     position: [ten_radius * angle.cos(), ten_upper_y, ten_radius * angle.sin()],
-                    color: ten_color,
                 });
             }
             // Vertices 7-11: lower ring (y=-0.2, angles 36, 108, 180, 252, 324)
@@ -366,7 +309,6 @@ mod imp {
                 let angle = (i as f32) * 2.0 * PI / 5.0 + PI / 5.0;
                 ten_verts.push(Vertex {
                     position: [ten_radius * angle.cos(), ten_lower_y, ten_radius * angle.sin()],
-                    color: ten_color,
                 });
             }
             let ten_vertex_buffer = VertexBuffer::new(&context, &ten_verts).unwrap();
@@ -374,86 +316,26 @@ mod imp {
             let twelve_vertex_buffer = VertexBuffer::new(
                 &context,
                 &[
-                    Vertex {
-                        position: [0.5, 0.5, 0.5],
-                        color: [0.961, 0.761, 0.067]
-                    },
-                    Vertex {
-                        position: [-0.5, 0.5, 0.5],
-                        color: [0.961, 0.761, 0.067]
-                    },
-                    Vertex {
-                        position: [0.5, -0.5, 0.5],
-                        color: [0.961, 0.761, 0.067]
-                    },
-                    Vertex {
-                        position: [0.5, 0.5, -0.5],
-                        color: [0.961, 0.761, 0.067]
-                    },
-                    Vertex {
-                        position: [-0.5, -0.5, 0.5],
-                        color: [0.961, 0.761, 0.067]
-                    },
-                    Vertex {
-                        position: [0.5, -0.5, -0.5],
-                        color: [0.961, 0.761, 0.067]
-                    },
-                    Vertex {
-                        position: [-0.5, 0.5, -0.5],
-                        color: [0.961, 0.761, 0.067]
-                    },
-                    Vertex {
-                        position: [-0.5, -0.5, -0.5],
-                        color: [0.961, 0.761, 0.067]
-                    },
-                    Vertex {
-                        position: [0., 0.5 / PHI, PHI / 2.],
-                        color: [0.961, 0.761, 0.067]
-                    },
-                    Vertex {
-                        position: [0., -0.5 / PHI, PHI / 2.],
-                        color: [0.961, 0.761, 0.067]
-                    },
-                    Vertex {
-                        position: [0., 0.5 / PHI, -PHI / 2.],
-                        color: [0.961, 0.761, 0.067]
-                    },
-                    Vertex {
-                        position: [0., -0.5 / PHI, -PHI / 2.],
-                        color: [0.961, 0.761, 0.067]
-                    },
-                    Vertex {
-                        position: [0.5 / PHI, PHI / 2., 0.],
-                        color: [0.961, 0.761, 0.067]
-                    },
-                    Vertex {
-                        position: [-0.5 / PHI, PHI / 2., 0.],
-                        color: [0.961, 0.761, 0.067]
-                    },
-                    Vertex {
-                        position: [0.5 / PHI, -PHI / 2., 0.],
-                        color: [0.961, 0.761, 0.067]
-                    },
-                    Vertex {
-                        position: [-0.5 / PHI, -PHI / 2., 0.],
-                        color: [0.961, 0.761, 0.067]
-                    },
-                    Vertex {
-                        position: [PHI / 2., 0., 0.5 / PHI],
-                        color: [0.961, 0.761, 0.067]
-                    },
-                    Vertex {
-                        position: [-PHI / 2., 0., 0.5 / PHI],
-                        color: [0.961, 0.761, 0.067]
-                    },
-                    Vertex {
-                        position: [PHI / 2., 0., -0.5 / PHI],
-                        color: [0.961, 0.761, 0.067]
-                    },
-                    Vertex {
-                        position: [-PHI / 2., 0., -0.5 / PHI],
-                        color: [0.961, 0.761, 0.067]
-                    },
+                    Vertex { position: [0.5, 0.5, 0.5] },
+                    Vertex { position: [-0.5, 0.5, 0.5] },
+                    Vertex { position: [0.5, -0.5, 0.5] },
+                    Vertex { position: [0.5, 0.5, -0.5] },
+                    Vertex { position: [-0.5, -0.5, 0.5] },
+                    Vertex { position: [0.5, -0.5, -0.5] },
+                    Vertex { position: [-0.5, 0.5, -0.5] },
+                    Vertex { position: [-0.5, -0.5, -0.5] },
+                    Vertex { position: [0., 0.5 / PHI, PHI / 2.] },
+                    Vertex { position: [0., -0.5 / PHI, PHI / 2.] },
+                    Vertex { position: [0., 0.5 / PHI, -PHI / 2.] },
+                    Vertex { position: [0., -0.5 / PHI, -PHI / 2.] },
+                    Vertex { position: [0.5 / PHI, PHI / 2., 0.] },
+                    Vertex { position: [-0.5 / PHI, PHI / 2., 0.] },
+                    Vertex { position: [0.5 / PHI, -PHI / 2., 0.] },
+                    Vertex { position: [-0.5 / PHI, -PHI / 2., 0.] },
+                    Vertex { position: [PHI / 2., 0., 0.5 / PHI] },
+                    Vertex { position: [-PHI / 2., 0., 0.5 / PHI] },
+                    Vertex { position: [PHI / 2., 0., -0.5 / PHI] },
+                    Vertex { position: [-PHI / 2., 0., -0.5 / PHI] },
                 ],
             )
             .unwrap();
@@ -461,54 +343,18 @@ mod imp {
             let twenty_vertex_buffer = VertexBuffer::new(
                 &context,
                 &[
-                    Vertex {
-                        position: [0., 0.5, PHI / 2.],
-                        color: [0.902, 0.380, 0.000]
-                    },
-                    Vertex {
-                        position: [0., -0.5, PHI / 2.],
-                        color: [0.902, 0.380, 0.000]
-                    },
-                    Vertex {
-                        position: [0., 0.5, -PHI / 2.],
-                        color: [0.902, 0.380, 0.000]
-                    },
-                    Vertex {
-                        position: [0., -0.5, -PHI / 2.],
-                        color: [0.902, 0.380, 0.000]
-                    },
-                    Vertex {
-                        position: [0.5, PHI / 2., 0.],
-                        color: [0.902, 0.380, 0.000]
-                    },
-                    Vertex {
-                        position: [0.5, -PHI / 2., 0.],
-                        color: [0.902, 0.380, 0.000]
-                    },
-                    Vertex {
-                        position: [-0.5, PHI / 2., 0.],
-                        color: [0.902, 0.380, 0.000]
-                    },
-                    Vertex {
-                        position: [-0.5, -PHI / 2., 0.],
-                        color: [0.902, 0.380, 0.000]
-                    },
-                    Vertex {
-                        position: [PHI / 2., 0., 0.5],
-                        color: [0.902, 0.380, 0.000]
-                    },
-                    Vertex {
-                        position: [PHI / 2., 0., -0.5],
-                        color: [0.902, 0.380, 0.000]
-                    },
-                    Vertex {
-                        position: [-PHI / 2., 0., 0.5],
-                        color: [0.902, 0.380, 0.000]
-                    },
-                    Vertex {
-                        position: [-PHI / 2., 0., -0.5],
-                        color: [0.902, 0.380, 0.000]
-                    },
+                    Vertex { position: [0., 0.5, PHI / 2.] },
+                    Vertex { position: [0., -0.5, PHI / 2.] },
+                    Vertex { position: [0., 0.5, -PHI / 2.] },
+                    Vertex { position: [0., -0.5, -PHI / 2.] },
+                    Vertex { position: [0.5, PHI / 2., 0.] },
+                    Vertex { position: [0.5, -PHI / 2., 0.] },
+                    Vertex { position: [-0.5, PHI / 2., 0.] },
+                    Vertex { position: [-0.5, -PHI / 2., 0.] },
+                    Vertex { position: [PHI / 2., 0., 0.5] },
+                    Vertex { position: [PHI / 2., 0., -0.5] },
+                    Vertex { position: [-PHI / 2., 0., 0.5] },
+                    Vertex { position: [-PHI / 2., 0., -0.5] },
                 ],
             )
             .unwrap();
@@ -721,16 +567,16 @@ mod imp {
 
                         in mat4 world_matrix;
                         uniform mat4 perspective;
+                        uniform vec3 die_color;
 
                         in vec3 position;
-                        in vec3 color;
                         out vec3 vColor;
                         out vec3 vPosition;
 
                         void main() {
                             vec4 worldPos = vec4(position, 1.0) * world_matrix;
                             gl_Position = worldPos * perspective;
-                            vColor = color;
+                            vColor = die_color;
                             vPosition = worldPos.xyz;
                         }
                     ",
@@ -757,9 +603,9 @@ mod imp {
                         #version 150
                         in mat4 world_matrix;
                         uniform mat4 perspective;
+                        uniform vec3 die_color;
 
                         in vec3 position;
-                        in vec3 color;
 
                         out vec3 vColor;
                         out vec3 vPosition;
@@ -767,7 +613,7 @@ mod imp {
                         void main() {
                             vec4 worldPos = vec4(position, 1.0) * world_matrix;
                             gl_Position = worldPos * perspective;
-                            vColor = color;
+                            vColor = die_color;
                             vPosition = worldPos.xyz;
                         }
                     ",
@@ -792,6 +638,7 @@ mod imp {
 
             let dice = Vec::new();
             let prev_size = 0usize;
+            let colors = Self::load_colors_from_settings();
 
             Renderer {
                 context,
@@ -818,7 +665,24 @@ mod imp {
                 prev_size,
                 prev_dimensions: (0, 0),
                 die_screen_positions: Vec::new(),
+                colors,
             }
+        }
+
+        fn load_colors_from_settings() -> [[f32; 3]; 6] {
+            let settings = gio::Settings::new("org.lesslie.dice");
+            [
+                hex_to_rgb(&settings.string("color-d4")),
+                hex_to_rgb(&settings.string("color-d6")),
+                hex_to_rgb(&settings.string("color-d8")),
+                hex_to_rgb(&settings.string("color-d10")),
+                hex_to_rgb(&settings.string("color-d12")),
+                hex_to_rgb(&settings.string("color-d20")),
+            ]
+        }
+
+        fn update_colors(&mut self) {
+            self.colors = Self::load_colors_from_settings();
         }
 
         fn draw(&mut self) {
@@ -845,9 +709,7 @@ mod imp {
                 ]
             };
 
-            let uniforms = uniform! {
-                perspective: perspective,
-            };
+            let colors = &self.colors;
 
             let size: &usize = &self.dice.len();
 
@@ -1034,82 +896,31 @@ mod imp {
                 clear(GL_DEPTH_BUFFER_BIT);
             }
 
-            if self.four_per_instance.len() > 0 {
-                frame
-                    .draw(
-                       (&self.four_vertex_buffer,
-                        self.four_per_instance.per_instance().unwrap()),
-                        &self.four_index_buffer,
-                        &self.program,
-                        &uniforms,
-                        &params,
-                    )
-                    .unwrap();
-            }
+            let die_types: [(&VertexBuffer<Vertex>, &IndexBuffer<u16>, &VertexBuffer<Attr>, usize); 6] = [
+                (&self.four_vertex_buffer, &self.four_index_buffer, &self.four_per_instance, 0),
+                (&self.six_vertex_buffer, &self.six_index_buffer, &self.six_per_instance, 1),
+                (&self.eight_vertex_buffer, &self.eight_index_buffer, &self.eight_per_instance, 2),
+                (&self.ten_vertex_buffer, &self.ten_index_buffer, &self.ten_per_instance, 3),
+                (&self.twelve_vertex_buffer, &self.twelve_index_buffer, &self.twelve_per_instance, 4),
+                (&self.twenty_vertex_buffer, &self.twenty_index_buffer, &self.twenty_per_instance, 5),
+            ];
 
-            if self.six_per_instance.len() > 0 {
-                frame
-                    .draw(
-                       (&self.six_vertex_buffer,
-                        self.six_per_instance.per_instance().unwrap()),
-                        &self.six_index_buffer,
-                        &self.program,
-                        &uniforms,
-                        &params,
-                    )
-                    .unwrap();
-            }
-
-            if self.eight_per_instance.len() > 0 {
-                frame
-                    .draw(
-                       (&self.eight_vertex_buffer,
-                        self.eight_per_instance.per_instance().unwrap()),
-                        &self.eight_index_buffer,
-                        &self.program,
-                        &uniforms,
-                        &params,
-                    )
-                    .unwrap();
-            }
-
-            if self.ten_per_instance.len() > 0 {
-                frame
-                    .draw(
-                       (&self.ten_vertex_buffer,
-                        self.ten_per_instance.per_instance().unwrap()),
-                        &self.ten_index_buffer,
-                        &self.program,
-                        &uniforms,
-                        &params,
-                    )
-                    .unwrap();
-            }
-
-            if self.twelve_per_instance.len() > 0 {
-                frame
-                    .draw(
-                       (&self.twelve_vertex_buffer,
-                        self.twelve_per_instance.per_instance().unwrap()),
-                        &self.twelve_index_buffer,
-                        &self.program,
-                        &uniforms,
-                        &params,
-                    )
-                    .unwrap();
-            }
-
-            if self.twenty_per_instance.len() > 0 {
-                frame
-                    .draw(
-                       (&self.twenty_vertex_buffer,
-                        self.twenty_per_instance.per_instance().unwrap()),
-                        &self.twenty_index_buffer,
-                        &self.program,
-                        &uniforms,
-                        &params,
-                    )
-                    .unwrap();
+            for (vb, ib, inst, color_idx) in die_types {
+                if inst.len() > 0 {
+                    let uniforms = uniform! {
+                        perspective: perspective,
+                        die_color: colors[color_idx],
+                    };
+                    frame
+                        .draw(
+                            (vb, inst.per_instance().unwrap()),
+                            ib,
+                            &self.program,
+                            &uniforms,
+                            &params,
+                        )
+                        .unwrap();
+                }
             }
             frame.finish().unwrap();
         }
@@ -1118,6 +929,7 @@ mod imp {
     #[derive(Default)]
     pub struct DiceArea {
         pub renderer: RefCell<Option<Renderer>>,
+        pub colors_dirty: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -1130,6 +942,16 @@ mod imp {
     impl ObjectImpl for DiceArea {
         fn constructed(&self) {
             self.parent_constructed();
+
+            let settings = gio::Settings::new("org.lesslie.dice");
+            for key in &["color-d4", "color-d6", "color-d8", "color-d10", "color-d12", "color-d20"] {
+                settings.connect_changed(
+                    Some(key),
+                    glib::clone!(#[weak(rename_to = this)] self, move |_settings, _key| {
+                        this.colors_dirty.set(true);
+                    }),
+                );
+            }
 
             self.obj().add_tick_callback(|widget, _clock| {
                 widget.queue_draw();
@@ -1201,10 +1023,14 @@ mod imp {
 
     impl GLAreaImpl for DiceArea {
         fn render(&self, _context: &gtk::gdk::GLContext) -> glib::Propagation {
-            self.renderer.borrow_mut().as_mut().unwrap().draw();
+            let mut binding = self.renderer.borrow_mut();
+            let renderer = binding.as_mut().unwrap();
+            if self.colors_dirty.replace(false) {
+                renderer.update_colors();
+            }
+            renderer.draw();
             glib::Propagation::Stop
         }
-
     }
 }
 
