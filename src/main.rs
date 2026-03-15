@@ -58,8 +58,15 @@ fn main() -> glib::ExitCode {
         });
     }
 
-    // Load resources
-    let resources = gio::Resource::load(PKGDATADIR.to_owned() + "/dice.gresource")
+    // Load resources — try next to the executable first (uninstalled/dev builds),
+    // then fall back to the installed PKGDATADIR path.
+    let resource_path = std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(|dir| dir.join("dice.gresource")))
+        .filter(|p| p.exists())
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_else(|| PKGDATADIR.to_owned() + "/dice.gresource");
+    let resources = gio::Resource::load(&resource_path)
         .expect("Could not load resources");
     gio::resources_register(&resources);
 

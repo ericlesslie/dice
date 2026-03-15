@@ -563,7 +563,7 @@ mod imp {
                         in vec3 color;
 
                         out vec3 vColor;
-                        out vec3 v_normal
+                        out vec3 v_normal;
 
                         void main() {
                             gl_Position = vec4(position, 1.0) * world_matrix * perspective;

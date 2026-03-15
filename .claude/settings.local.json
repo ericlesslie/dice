@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(brew:*)",
+      "Bash(GETTEXT_DIR=/opt/homebrew/opt/gettext meson compile -C /Users/ericlesslie/Projects/Personal/dice/builddir 2>&1 | tail -30)",
+      "Bash(otool:*)",
+      "Bash(grep:*)",
+      "Bash(GETTEXT_DIR=/opt/homebrew/opt/gettext meson compile -C builddir)"
+    ]
+  }
+}
