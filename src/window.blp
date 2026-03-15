@@ -26,10 +26,17 @@ template $DiceWindow : Adw.ApplicationWindow {
         valign: center;
 
 
-        $DiceArea dice_area {
-          width-request: 400;
-          height-request: 400;
-          allowed-apis: 1;
+        Gtk.Overlay dice_overlay {
+          $DiceArea dice_area {
+            width-request: 400;
+            height-request: 400;
+            allowed-apis: 1;
+          }
+
+          [overlay]
+          Gtk.Fixed dice_labels {
+            can-target: false;
+          }
         }
 
         Frame {

@@ -17,17 +17,35 @@ pub struct Die {
   pub time: Cell<Option<Instant>>,
   pub kind: DieKind,
   pub val: Cell<u32>,
+  pub spin_seed: Cell<[u32; 3]>,
 }
 
 impl Die {
     pub fn new(kind: DieKind) -> Self {
+        let mut rng = thread_rng();
         let val = Self::generate_roll(kind);
-        Self { time: Cell::new(Some(Instant::now())), kind, val: Cell::new(val) }
+        let spin_seed = [
+            rng.gen_range(2..=5),
+            rng.gen_range(2..=5),
+            rng.gen_range(2..=5),
+        ];
+        Self {
+            time: Cell::new(Some(Instant::now())),
+            kind,
+            val: Cell::new(val),
+            spin_seed: Cell::new(spin_seed),
+        }
     }
 
     pub fn roll(&self) {
+        let mut rng = thread_rng();
         self.time.set(Some(Instant::now()));
         self.val.set(Self::generate_roll(self.kind));
+        self.spin_seed.set([
+            rng.gen_range(2..=5),
+            rng.gen_range(2..=5),
+            rng.gen_range(2..=5),
+        ]);
     }
 
     fn generate_roll(kind: DieKind) -> u32 {

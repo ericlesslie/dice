@@ -20,11 +20,9 @@
 
 use gtk::prelude::*;
 use adw::subclass::prelude::*;
-use gtk::{gio, glib};
+use gtk::{gdk, gio, glib};
 
 use crate::dice_area::DiceArea;
-
-use std::time::Duration;
 
 mod imp {
     use super::*;
@@ -37,6 +35,10 @@ mod imp {
         pub header_bar: TemplateChild<adw::HeaderBar>,
         #[template_child]
         pub dice_area: TemplateChild<DiceArea>,
+        #[template_child]
+        pub dice_overlay: TemplateChild<gtk::Overlay>,
+        #[template_child]
+        pub dice_labels: TemplateChild<gtk::Fixed>,
         #[template_child]
         pub four_side: TemplateChild<gtk::Button>,
         #[template_child]
@@ -70,6 +72,40 @@ mod imp {
             self.parent_constructed();
 
             self.dice_area.set_has_depth_buffer(true);
+
+            let dice_area = self.dice_area.clone();
+            let dice_labels = self.dice_labels.clone();
+            self.obj().add_tick_callback(move |_widget, _clock| {
+                // Remove old labels
+                let mut child = dice_labels.first_child();
+                while let Some(c) = child {
+                    child = c.next_sibling();
+                    dice_labels.remove(&c);
+                }
+
+                // Add labels for settled dice
+                let infos = dice_area.settled_dice_info();
+                for (wx, wy, val) in infos {
+                    let label = gtk::Label::new(Some(&val.to_string()));
+                    label.add_css_class("die-number");
+                    label.set_can_target(false);
+                    let (_, nat_w, _, _) = label.measure(gtk::Orientation::Horizontal, -1);
+                    let (_, nat_h, _, _) = label.measure(gtk::Orientation::Vertical, -1);
+                    dice_labels.put(&label, (wx - nat_w as f32 / 2.0) as f64, (wy - nat_h as f32 / 2.0) as f64);
+                }
+
+                glib::ControlFlow::Continue
+            });
+
+            let css = gtk::CssProvider::new();
+            css.load_from_data(
+                ".die-number { font-size: 24px; font-weight: bold; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }",
+            );
+            gtk::style_context_add_provider_for_display(
+                &gdk::Display::default().unwrap(),
+                &css,
+                gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+            );
         }
     }
     impl WidgetImpl for DiceWindow {}
