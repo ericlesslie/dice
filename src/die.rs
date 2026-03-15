@@ -18,6 +18,9 @@ pub struct Die {
   pub kind: DieKind,
   pub val: Cell<u32>,
   pub spin_seed: Cell<[u32; 3]>,
+  pub prev_pos: Cell<Option<(f32, f32)>>,
+  pub reflow_from: Cell<Option<(f32, f32)>>,
+  pub reflow_start: Cell<Option<Instant>>,
 }
 
 impl Die {
@@ -34,6 +37,9 @@ impl Die {
             kind,
             val: Cell::new(val),
             spin_seed: Cell::new(spin_seed),
+            prev_pos: Cell::new(None),
+            reflow_from: Cell::new(None),
+            reflow_start: Cell::new(None),
         }
     }
 

@@ -30,6 +30,7 @@ mod imp {
     implement_vertex!(Attr, world_matrix);
 
     pub(super) const SPIN_DURATION: f32 = 1.5;
+    pub(super) const REFLOW_DURATION: f32 = 0.3;
     pub(super) const MAX_DICE: usize = 20;
 
     // Builds a world matrix for the vec * mat shader convention (column-major).
@@ -235,6 +236,7 @@ mod imp {
 
         pub dice: Vec<Die>,
         prev_size: usize,
+        prev_dimensions: (u32, u32),
         pub die_screen_positions: Vec<(f32, f32, usize)>,
     }
 
@@ -814,6 +816,7 @@ mod imp {
                 twenty_per_instance,
                 dice,
                 prev_size,
+                prev_dimensions: (0, 0),
                 die_screen_positions: Vec::new(),
             }
         }
@@ -858,14 +861,17 @@ mod imp {
             */
 
             let any_animating = self.dice.iter().any(|die| {
-                if let Some(t) = die.time.get() {
-                    t.elapsed().as_secs_f32() < SPIN_DURATION
-                } else {
-                    false
-                }
+                let spin_active = die.time.get()
+                    .map(|t| t.elapsed().as_secs_f32() < SPIN_DURATION)
+                    .unwrap_or(false);
+                let reflow_active = die.reflow_start.get()
+                    .map(|t| t.elapsed().as_secs_f32() < REFLOW_DURATION)
+                    .unwrap_or(false);
+                spin_active || reflow_active
             });
 
-            if size != &self.prev_size || any_animating {
+            let current_dimensions = self.context.get_framebuffer_dimensions();
+            if size != &self.prev_size || any_animating || current_dimensions != self.prev_dimensions {
                 let n = *size;
                 let viewport_width = 1.8f32;
                 let viewport_height = 1.6f32;
@@ -905,8 +911,36 @@ mod imp {
                     let col = i % cols;
                     let cols_this_row = (n - row * cols).min(cols);
 
-                    let x = -(cols_this_row as f32 - 1.0) * slot_width / 2.0 + col as f32 * slot_width;
-                    let y = (rows as f32 - 1.0) * slot_height / 2.0 - row as f32 * slot_height;
+                    let target_x = -(cols_this_row as f32 - 1.0) * slot_width / 2.0 + col as f32 * slot_width;
+                    let target_y = (rows as f32 - 1.0) * slot_height / 2.0 - row as f32 * slot_height;
+
+                    // Reflow animation: detect position change and interpolate
+                    if let Some((px, py)) = die.prev_pos.get() {
+                        let diff = (target_x - px).abs() + (target_y - py).abs();
+                        if diff > 0.001 && die.reflow_from.get().is_none() {
+                            die.reflow_from.set(Some((px, py)));
+                            die.reflow_start.set(Some(std::time::Instant::now()));
+                        }
+                    }
+
+                    let (x, y) = if let Some((fx, fy)) = die.reflow_from.get() {
+                        let elapsed = die.reflow_start.get()
+                            .map(|t| t.elapsed().as_secs_f32())
+                            .unwrap_or(REFLOW_DURATION);
+                        let t = (elapsed / REFLOW_DURATION).min(1.0);
+                        let eased = 1.0 - (1.0 - t).powi(3); // ease-out cubic
+                        if t >= 1.0 {
+                            die.reflow_from.set(None);
+                            die.reflow_start.set(None);
+                            (target_x, target_y)
+                        } else {
+                            (fx + (target_x - fx) * eased, fy + (target_y - fy) * eased)
+                        }
+                    } else {
+                        (target_x, target_y)
+                    };
+
+                    die.prev_pos.set(Some((x, y)));
 
                     let elapsed = die.time.get()
                         .map(|t| t.elapsed().as_secs_f32())
@@ -970,6 +1004,7 @@ mod imp {
                 };
 
                 self.prev_size = *size;
+                self.prev_dimensions = current_dimensions;
             }
 
             let params = glium::DrawParameters::default();
@@ -1102,7 +1137,7 @@ mod imp {
             });
 
             let click = gtk::GestureClick::new();
-            click.connect_pressed(glib::clone!(@weak self as this => move |_gesture, _n, x, y| {
+            click.connect_pressed(glib::clone!(#[weak(rename_to = this)] self, move |_gesture, _n, x, y| {
                 let widget = this.obj();
                 let scale = widget.scale_factor() as f32;
                 let click_x = x as f32 * scale;
@@ -1165,10 +1200,9 @@ mod imp {
     }
 
     impl GLAreaImpl for DiceArea {
-        // Is a glib::Propagation in post 0.7 gtk, need to figure out how to update
-        fn render(&self, _context: &gtk::gdk::GLContext) -> bool {
+        fn render(&self, _context: &gtk::gdk::GLContext) -> glib::Propagation {
             self.renderer.borrow_mut().as_mut().unwrap().draw();
-            false
+            glib::Propagation::Stop
         }
 
     }
@@ -1177,7 +1211,8 @@ mod imp {
 
 glib::wrapper! {
     pub struct DiceArea(ObjectSubclass<imp::DiceArea>)
-        @extends gtk::GLArea, gtk::Widget;
+        @extends gtk::GLArea, gtk::Widget,
+        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }
 
 impl Default for DiceArea {
@@ -1311,6 +1346,27 @@ impl DiceArea {
             }
         } else {
             println!("Renderer doesn't exist");
+        }
+    }
+
+    pub fn clear(&self) {
+        let imp = self.imp();
+
+        let mut binding = imp.renderer.borrow_mut();
+        if let Some(renderer) = binding.as_mut() {
+            renderer.dice.clear();
+        } else {
+            println!("Renderer doesn't exist");
+        }
+    }
+
+    pub fn has_dice(&self) -> bool {
+        let imp_ref = self.imp();
+        let binding = imp_ref.renderer.borrow();
+        if let Some(renderer) = binding.as_ref() {
+            !renderer.dice.is_empty()
+        } else {
+            false
         }
     }
 

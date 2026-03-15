@@ -23,10 +23,12 @@ template $DiceWindow : Adw.ApplicationWindow {
 
       Box outer_roll_area {
         orientation: vertical;
-        valign: center;
 
 
         Gtk.Overlay dice_overlay {
+          vexpand: true;
+          valign: fill;
+
           $DiceArea dice_area {
             width-request: 400;
             height-request: 400;
@@ -40,64 +42,95 @@ template $DiceWindow : Adw.ApplicationWindow {
         }
 
         Frame {
-          valign: center;
-          margin-start: 130;
-          margin-end: 130;
+          halign: center;
+          valign: end;
 
-          Box roll_buttons {
-            orientation: horizontal;
+          Box {
+            orientation: vertical;
             halign: center;
-            valign: center;
-            margin-start: 8;
-            margin-end: 8;
-            spacing: 4;
 
-            Button four_side {
-              margin-top: 8;
-              margin-bottom: 8;
-              name: "4";
-              label: _("4");
-              clicked => $handle_four_clicked() swapped;
+            Box roll_buttons {
+              orientation: horizontal;
+              halign: center;
+              valign: center;
+              margin-start: 8;
+              margin-end: 8;
+              spacing: 4;
+
+              Button four_side {
+                margin-top: 8;
+                margin-bottom: 8;
+                name: "4";
+                label: _("4");
+                clicked => $handle_four_clicked() swapped;
+              }
+
+              Button six_side {
+                margin-top: 8;
+                margin-bottom: 8;
+                name: "6";
+                label: _("6");
+                clicked => $handle_six_clicked() swapped;
+              }
+
+              Button eight_side {
+                margin-top: 8;
+                margin-bottom: 8;
+                name: "8";
+                label: _("8");
+                clicked => $handle_eight_clicked() swapped;
+              }
+
+              Button ten_side {
+                margin-top: 8;
+                margin-bottom: 8;
+                name: "10";
+                label: _("10");
+                clicked => $handle_ten_clicked() swapped;
+              }
+
+              Button twelve_side {
+                margin-top: 8;
+                margin-bottom: 8;
+                name: "12";
+                label: _("12");
+                clicked => $handle_twelve_clicked() swapped;
+              }
+
+              Button twenty_side {
+                margin-top: 8;
+                margin-bottom: 8;
+                name: "20";
+                label: _("20");
+                clicked => $handle_twenty_clicked() swapped;
+              }
             }
 
-            Button six_side {
-              margin-top: 8;
-              margin-bottom: 8;
-              name: "6";
-              label: _("6");
-              clicked => $handle_six_clicked() swapped;
+            Separator {
             }
 
-            Button eight_side {
-              margin-top: 8;
+            Box action_buttons {
+              orientation: horizontal;
+              halign: center;
+              spacing: 8;
+              margin-top: 4;
               margin-bottom: 8;
-              name: "8";
-              label: _("8");
-              clicked => $handle_eight_clicked() swapped;
-            }
 
-            Button ten_side {
-              margin-top: 8;
-              margin-bottom: 8;
-              name: "10";
-              label: _("10");
-              clicked => $handle_ten_clicked() swapped;
-            }
+              Label total_label {
+                visible: false;
+              }
 
-            Button twelve_side {
-              margin-top: 8;
-              margin-bottom: 8;
-              name: "12";
-              label: _("12");
-              clicked => $handle_twelve_clicked() swapped;
-            }
+              Button reroll_button {
+                label: _("Reroll");
+                clicked => $handle_reroll_clicked() swapped;
+                sensitive: false;
+              }
 
-            Button twenty_side {
-              margin-top: 8;
-              margin-bottom: 8;
-              name: "20";
-              label: _("20");
-              clicked => $handle_twenty_clicked() swapped;
+              Button clear_button {
+                label: _("Clear");
+                clicked => $handle_clear_clicked() swapped;
+                sensitive: false;
+              }
             }
           }
         }

@@ -19,6 +19,7 @@
  */
 
 use gtk::prelude::*;
+use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gtk::{gio, glib};
 
@@ -44,6 +45,14 @@ mod imp {
             let obj = self.obj();
             obj.setup_gactions();
             obj.set_accels_for_action("app.quit", &["<primary>q"]);
+            obj.set_accels_for_action("win.roll-d4", &["4"]);
+            obj.set_accels_for_action("win.roll-d6", &["6"]);
+            obj.set_accels_for_action("win.roll-d8", &["8"]);
+            obj.set_accels_for_action("win.roll-d10", &["0"]);
+            obj.set_accels_for_action("win.roll-d12", &["<primary>2"]);
+            obj.set_accels_for_action("win.roll-d20", &["<primary>0"]);
+            obj.set_accels_for_action("win.reroll", &["r"]);
+            obj.set_accels_for_action("win.clear", &["c"]);
         }
     }
 
@@ -97,8 +106,7 @@ impl DiceApplication {
 
     fn show_about(&self) {
         let window = self.active_window().unwrap();
-        let about = adw::AboutWindow::builder()
-            .transient_for(&window)
+        let about = adw::AboutDialog::builder()
             .application_name("dice")
             .application_icon("org.lesslie.dice")
             .developer_name("Eric Lesslie")
@@ -107,6 +115,6 @@ impl DiceApplication {
             .copyright("© 2024 Eric Lesslie")
             .build();
 
-        about.present();
+        about.present(Some(&window));
     }
 }

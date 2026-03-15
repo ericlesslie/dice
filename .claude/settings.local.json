@@ -6,7 +6,13 @@
       "Bash(otool:*)",
       "Bash(grep:*)",
       "Bash(GETTEXT_DIR=/opt/homebrew/opt/gettext meson compile -C builddir)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(rm:*)",
+      "Bash(ls:*)",
+      "Bash(cargo search:*)",
+      "Bash(pkg-config:*)",
+      "Bash(cargo info:*)",
+      "Bash(which rustc:*)"
     ]
   }
 }

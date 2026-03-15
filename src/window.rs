@@ -49,6 +49,12 @@ mod imp {
         pub twelve_side: TemplateChild<gtk::Button>,
         #[template_child]
         pub twenty_side: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub total_label: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub reroll_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub clear_button: TemplateChild<gtk::Button>,
     }
 
     #[glib::object_subclass]
@@ -73,8 +79,52 @@ mod imp {
 
             self.dice_area.set_has_depth_buffer(true);
 
+            // Register window actions for keyboard shortcuts
+            let dice_area = self.dice_area.clone();
+            let action = gio::SimpleAction::new("roll-d4", None);
+            action.connect_activate(move |_, _| { dice_area.add_four(); });
+            self.obj().add_action(&action);
+
+            let dice_area = self.dice_area.clone();
+            let action = gio::SimpleAction::new("roll-d6", None);
+            action.connect_activate(move |_, _| { dice_area.add_six(); });
+            self.obj().add_action(&action);
+
+            let dice_area = self.dice_area.clone();
+            let action = gio::SimpleAction::new("roll-d8", None);
+            action.connect_activate(move |_, _| { dice_area.add_eight(); });
+            self.obj().add_action(&action);
+
+            let dice_area = self.dice_area.clone();
+            let action = gio::SimpleAction::new("roll-d10", None);
+            action.connect_activate(move |_, _| { dice_area.add_ten(); });
+            self.obj().add_action(&action);
+
+            let dice_area = self.dice_area.clone();
+            let action = gio::SimpleAction::new("roll-d12", None);
+            action.connect_activate(move |_, _| { dice_area.add_twelve(); });
+            self.obj().add_action(&action);
+
+            let dice_area = self.dice_area.clone();
+            let action = gio::SimpleAction::new("roll-d20", None);
+            action.connect_activate(move |_, _| { dice_area.add_twenty(); });
+            self.obj().add_action(&action);
+
+            let dice_area = self.dice_area.clone();
+            let action = gio::SimpleAction::new("reroll", None);
+            action.connect_activate(move |_, _| { dice_area.roll(); });
+            self.obj().add_action(&action);
+
+            let dice_area = self.dice_area.clone();
+            let action = gio::SimpleAction::new("clear", None);
+            action.connect_activate(move |_, _| { dice_area.clear(); });
+            self.obj().add_action(&action);
+
             let dice_area = self.dice_area.clone();
             let dice_labels = self.dice_labels.clone();
+            let total_label = self.total_label.clone();
+            let reroll_button = self.reroll_button.clone();
+            let clear_button = self.clear_button.clone();
             self.obj().add_tick_callback(move |_widget, _clock| {
                 // Remove old labels
                 let mut child = dice_labels.first_child();
@@ -85,22 +135,38 @@ mod imp {
 
                 // Add labels for settled dice
                 let infos = dice_area.settled_dice_info();
-                for (wx, wy, val) in infos {
+                for (wx, wy, val) in &infos {
                     let label = gtk::Label::new(Some(&val.to_string()));
                     label.add_css_class("die-number");
                     label.set_can_target(false);
                     let (_, nat_w, _, _) = label.measure(gtk::Orientation::Horizontal, -1);
                     let (_, nat_h, _, _) = label.measure(gtk::Orientation::Vertical, -1);
-                    dice_labels.put(&label, (wx - nat_w as f32 / 2.0) as f64, (wy - nat_h as f32 / 2.0) as f64);
+                    dice_labels.put(&label, (*wx - nat_w as f32 / 2.0) as f64, (*wy - nat_h as f32 / 2.0) as f64);
                 }
+
+                // Update total label
+                let has_dice = dice_area.has_dice();
+                if !infos.is_empty() {
+                    let sum: u32 = infos.iter().map(|(_, _, v)| v).sum();
+                    total_label.set_text(&format!("{}", sum));
+                    total_label.set_visible(true);
+                } else if !has_dice {
+                    total_label.set_visible(false);
+                }
+
+                // Update button sensitivity
+                reroll_button.set_sensitive(has_dice);
+                clear_button.set_sensitive(has_dice);
 
                 glib::ControlFlow::Continue
             });
 
             let css = gtk::CssProvider::new();
-            css.load_from_data(
-                ".die-number { font-size: 24px; font-weight: bold; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }",
+            css.load_from_string(
+                ".die-number { font-size: 24px; font-weight: bold; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.8); } .total-pill { font-weight: bold; padding: 4px 12px; }",
             );
+            self.total_label.add_css_class("total-pill");
+            self.total_label.add_css_class("dim-label");
             gtk::style_context_add_provider_for_display(
                 &gdk::Display::default().unwrap(),
                 &css,
@@ -116,12 +182,13 @@ mod imp {
 
 glib::wrapper! {
     pub struct DiceWindow(ObjectSubclass<imp::DiceWindow>)
-        @extends gtk::Widget, gtk::Window, gtk::ApplicationWindow, adw::ApplicationWindow,        @implements gio::ActionGroup, gio::ActionMap;
+        @extends gtk::Widget, gtk::Window, gtk::ApplicationWindow, adw::ApplicationWindow,
+        @implements gio::ActionGroup, gio::ActionMap, gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::Native, gtk::Root, gtk::ShortcutManager;
 }
 
 #[gtk::template_callbacks]
 impl DiceWindow {
-    pub fn new<P: glib::IsA<gtk::Application>>(application: &P) -> Self {
+    pub fn new<P: IsA<gtk::Application>>(application: &P) -> Self {
         glib::Object::builder()
             .property("application", application)
             .build()
@@ -167,5 +234,17 @@ impl DiceWindow {
         println!("Twenty clicked");
         let imp = &self.imp();
         imp.dice_area.add_twenty();
+    }
+
+    #[template_callback]
+    fn handle_reroll_clicked(&self) {
+        let imp = &self.imp();
+        imp.dice_area.roll();
+    }
+
+    #[template_callback]
+    fn handle_clear_clicked(&self) {
+        let imp = &self.imp();
+        imp.dice_area.clear();
     }
 }

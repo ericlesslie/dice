@@ -1,6 +1,6 @@
 [package]
 name = "dice"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
@@ -8,12 +8,12 @@ epoxy = "0.1.0"
 gettext-rs = { version = "0.7", features = ["gettext-system"] }
 gl = "0.14.0"
 glium = "0.34.0"
-graphene-rs = "0.20.0"
-gtk = { version = "0.7", package = "gtk4" }
+graphene-rs = "0.22"
+gtk = { version = "0.11", package = "gtk4", features = ["v4_12"] }
 libloading = "0.8.3"
 rand = "0.8.5"
 
 [dependencies.adw]
 package = "libadwaita"
-version = "0.5"
-features = ["v1_4"]
+version = "0.9"
+features = ["v1_5"]
