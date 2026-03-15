@@ -1219,6 +1219,26 @@ impl DiceArea {
         }
     }
 
+    pub fn dice_snapshot(&self) -> Vec<(DieKind, u32)> {
+        let imp_ref = self.imp();
+        let binding = imp_ref.renderer.borrow();
+        binding.as_ref().map(|r| {
+            r.dice.iter().map(|d| (d.kind, d.val.get())).collect()
+        }).unwrap_or_default()
+    }
+
+    pub fn restore_roll(&self, dice: &[(DieKind, u32)]) {
+        let imp = self.imp();
+        let mut binding = imp.renderer.borrow_mut();
+        if let Some(renderer) = binding.as_mut() {
+            renderer.dice.clear();
+            for &(kind, _) in dice {
+                if renderer.dice.len() >= imp::MAX_DICE { break; }
+                renderer.dice.push(Die::new(kind));
+            }
+        }
+    }
+
     pub fn start_tick(&self) {
         self.add_tick_callback(|s, _| {
             s.queue_draw();

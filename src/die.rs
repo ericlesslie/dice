@@ -13,7 +13,7 @@ fn make_rng() -> Box<dyn RngCore> {
     }
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum DieKind {
     Four,
     Six,

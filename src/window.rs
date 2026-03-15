@@ -22,7 +22,11 @@ use gtk::prelude::*;
 use adw::subclass::prelude::*;
 use gtk::{gdk, gio, glib};
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use crate::dice_area::DiceArea;
+use crate::sidebar::Sidebar;
 
 mod imp {
     use super::*;
@@ -33,6 +37,10 @@ mod imp {
         // Template widgets
         #[template_child]
         pub header_bar: TemplateChild<adw::HeaderBar>,
+        #[template_child]
+        pub split_view: TemplateChild<adw::OverlaySplitView>,
+        #[template_child]
+        pub sidebar_button: TemplateChild<gtk::ToggleButton>,
         #[template_child]
         pub dice_area: TemplateChild<DiceArea>,
         #[template_child]
@@ -55,6 +63,8 @@ mod imp {
         pub reroll_button: TemplateChild<gtk::Button>,
         #[template_child]
         pub clear_button: TemplateChild<gtk::Button>,
+
+        pub sidebar: RefCell<Option<Rc<RefCell<Sidebar>>>>,
     }
 
     #[glib::object_subclass]
@@ -79,45 +89,144 @@ mod imp {
 
             self.dice_area.set_has_depth_buffer(true);
 
+            // Bind sidebar button to split view
+            self.split_view.bind_property("show-sidebar", &*self.sidebar_button, "active")
+                .bidirectional()
+                .sync_create()
+                .build();
+
+            // Create sidebar
+            let dice_area_for_restore = self.dice_area.clone();
+            let sidebar = Sidebar::new(move |dice| {
+                dice_area_for_restore.restore_roll(dice);
+            });
+
+            self.split_view.set_sidebar(Some(sidebar.borrow().widget()));
+            *self.sidebar.borrow_mut() = Some(sidebar);
+
             // Register window actions for keyboard shortcuts
+            let settings = gio::Settings::new("org.lesslie.dice");
+
             let dice_area = self.dice_area.clone();
+            let sidebar_ref = self.sidebar.borrow().clone();
+            let settings_clone = settings.clone();
             let action = gio::SimpleAction::new("roll-d4", None);
-            action.connect_activate(move |_, _| { dice_area.add_four(); });
+            action.connect_activate(move |_, _| {
+                if settings_clone.boolean("record-all-rolls") {
+                    if let Some(ref sidebar_rc) = sidebar_ref {
+                        let snapshot = dice_area.dice_snapshot();
+                        sidebar_rc.borrow().add_recent(snapshot, sidebar_rc);
+                    }
+                }
+                dice_area.add_four();
+            });
             self.obj().add_action(&action);
 
             let dice_area = self.dice_area.clone();
+            let sidebar_ref = self.sidebar.borrow().clone();
+            let settings_clone = settings.clone();
             let action = gio::SimpleAction::new("roll-d6", None);
-            action.connect_activate(move |_, _| { dice_area.add_six(); });
+            action.connect_activate(move |_, _| {
+                if settings_clone.boolean("record-all-rolls") {
+                    if let Some(ref sidebar_rc) = sidebar_ref {
+                        let snapshot = dice_area.dice_snapshot();
+                        sidebar_rc.borrow().add_recent(snapshot, sidebar_rc);
+                    }
+                }
+                dice_area.add_six();
+            });
             self.obj().add_action(&action);
 
             let dice_area = self.dice_area.clone();
+            let sidebar_ref = self.sidebar.borrow().clone();
+            let settings_clone = settings.clone();
             let action = gio::SimpleAction::new("roll-d8", None);
-            action.connect_activate(move |_, _| { dice_area.add_eight(); });
+            action.connect_activate(move |_, _| {
+                if settings_clone.boolean("record-all-rolls") {
+                    if let Some(ref sidebar_rc) = sidebar_ref {
+                        let snapshot = dice_area.dice_snapshot();
+                        sidebar_rc.borrow().add_recent(snapshot, sidebar_rc);
+                    }
+                }
+                dice_area.add_eight();
+            });
             self.obj().add_action(&action);
 
             let dice_area = self.dice_area.clone();
+            let sidebar_ref = self.sidebar.borrow().clone();
+            let settings_clone = settings.clone();
             let action = gio::SimpleAction::new("roll-d10", None);
-            action.connect_activate(move |_, _| { dice_area.add_ten(); });
+            action.connect_activate(move |_, _| {
+                if settings_clone.boolean("record-all-rolls") {
+                    if let Some(ref sidebar_rc) = sidebar_ref {
+                        let snapshot = dice_area.dice_snapshot();
+                        sidebar_rc.borrow().add_recent(snapshot, sidebar_rc);
+                    }
+                }
+                dice_area.add_ten();
+            });
             self.obj().add_action(&action);
 
             let dice_area = self.dice_area.clone();
+            let sidebar_ref = self.sidebar.borrow().clone();
+            let settings_clone = settings.clone();
             let action = gio::SimpleAction::new("roll-d12", None);
-            action.connect_activate(move |_, _| { dice_area.add_twelve(); });
+            action.connect_activate(move |_, _| {
+                if settings_clone.boolean("record-all-rolls") {
+                    if let Some(ref sidebar_rc) = sidebar_ref {
+                        let snapshot = dice_area.dice_snapshot();
+                        sidebar_rc.borrow().add_recent(snapshot, sidebar_rc);
+                    }
+                }
+                dice_area.add_twelve();
+            });
             self.obj().add_action(&action);
 
             let dice_area = self.dice_area.clone();
+            let sidebar_ref = self.sidebar.borrow().clone();
+            let settings_clone = settings.clone();
             let action = gio::SimpleAction::new("roll-d20", None);
-            action.connect_activate(move |_, _| { dice_area.add_twenty(); });
+            action.connect_activate(move |_, _| {
+                if settings_clone.boolean("record-all-rolls") {
+                    if let Some(ref sidebar_rc) = sidebar_ref {
+                        let snapshot = dice_area.dice_snapshot();
+                        sidebar_rc.borrow().add_recent(snapshot, sidebar_rc);
+                    }
+                }
+                dice_area.add_twenty();
+            });
             self.obj().add_action(&action);
 
             let dice_area = self.dice_area.clone();
+            let sidebar_ref = self.sidebar.borrow().clone();
             let action = gio::SimpleAction::new("reroll", None);
-            action.connect_activate(move |_, _| { dice_area.roll(); });
+            action.connect_activate(move |_, _| {
+                if let Some(ref sidebar_rc) = sidebar_ref {
+                    let snapshot = dice_area.dice_snapshot();
+                    sidebar_rc.borrow().add_recent(snapshot, sidebar_rc);
+                }
+                dice_area.roll();
+            });
             self.obj().add_action(&action);
 
             let dice_area = self.dice_area.clone();
+            let sidebar_ref = self.sidebar.borrow().clone();
             let action = gio::SimpleAction::new("clear", None);
-            action.connect_activate(move |_, _| { dice_area.clear(); });
+            action.connect_activate(move |_, _| {
+                if let Some(ref sidebar_rc) = sidebar_ref {
+                    let snapshot = dice_area.dice_snapshot();
+                    sidebar_rc.borrow().add_recent(snapshot, sidebar_rc);
+                }
+                dice_area.clear();
+            });
+            self.obj().add_action(&action);
+
+            // Toggle sidebar action
+            let split_view = self.split_view.clone();
+            let action = gio::SimpleAction::new("toggle-sidebar", None);
+            action.connect_activate(move |_, _| {
+                split_view.set_show_sidebar(!split_view.shows_sidebar());
+            });
             self.obj().add_action(&action);
 
             let dice_area = self.dice_area.clone();
@@ -194,57 +303,76 @@ impl DiceWindow {
             .build()
     }
 
+    fn snapshot_if_recording(&self) {
+        let settings = gio::Settings::new("org.lesslie.dice");
+        if settings.boolean("record-all-rolls") {
+            let imp = self.imp();
+            if let Some(ref sidebar_rc) = *imp.sidebar.borrow() {
+                let snapshot = imp.dice_area.dice_snapshot();
+                sidebar_rc.borrow().add_recent(snapshot, sidebar_rc);
+            }
+        }
+    }
+
     #[template_callback]
     fn handle_four_clicked(&self) {
         println!("Four clicked");
-        let imp = &self.imp();
-        imp.dice_area.add_four();
+        self.snapshot_if_recording();
+        self.imp().dice_area.add_four();
     }
 
     #[template_callback]
     fn handle_six_clicked(&self) {
         println!("Six clicked");
-        let imp = &self.imp();
-        imp.dice_area.add_six();
+        self.snapshot_if_recording();
+        self.imp().dice_area.add_six();
     }
 
     #[template_callback]
     fn handle_eight_clicked(&self) {
         println!("Eight clicked");
-        let imp = &self.imp();
-        imp.dice_area.add_eight();
+        self.snapshot_if_recording();
+        self.imp().dice_area.add_eight();
     }
 
     #[template_callback]
     fn handle_ten_clicked(&self) {
         println!("Ten clicked");
-        let imp = &self.imp();
-        imp.dice_area.add_ten();
+        self.snapshot_if_recording();
+        self.imp().dice_area.add_ten();
     }
 
     #[template_callback]
     fn handle_twelve_clicked(&self) {
         println!("Twelve clicked");
-        let imp = &self.imp();
-        imp.dice_area.add_twelve();
+        self.snapshot_if_recording();
+        self.imp().dice_area.add_twelve();
     }
 
     #[template_callback]
     fn handle_twenty_clicked(&self) {
         println!("Twenty clicked");
-        let imp = &self.imp();
-        imp.dice_area.add_twenty();
+        self.snapshot_if_recording();
+        self.imp().dice_area.add_twenty();
     }
 
     #[template_callback]
     fn handle_reroll_clicked(&self) {
         let imp = &self.imp();
+        if let Some(ref sidebar_rc) = *imp.sidebar.borrow() {
+            let snapshot = imp.dice_area.dice_snapshot();
+            sidebar_rc.borrow().add_recent(snapshot, sidebar_rc);
+        }
         imp.dice_area.roll();
     }
 
     #[template_callback]
     fn handle_clear_clicked(&self) {
         let imp = &self.imp();
+        if let Some(ref sidebar_rc) = *imp.sidebar.borrow() {
+            let snapshot = imp.dice_area.dice_snapshot();
+            sidebar_rc.borrow().add_recent(snapshot, sidebar_rc);
+        }
         imp.dice_area.clear();
     }
 }

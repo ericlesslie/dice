@@ -24,6 +24,8 @@ mod window;
 mod dice_area;
 mod die;
 mod preferences;
+mod roll_history;
+mod sidebar;
 
 use self::application::DiceApplication;
 use self::window::DiceWindow;

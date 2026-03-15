@@ -30,5 +30,10 @@
 			<summary>Random number generator algorithm</summary>
 			<description>One of: chacha, stdrng, smallrng</description>
 		</key>
+		<key name="record-all-rolls" type="b">
+			<default>true</default>
+			<summary>Record every die addition to Recents</summary>
+			<description>When true, every die added records the current state to the sidebar Recents list. When false, only Reroll and Clear actions are recorded.</description>
+		</key>
 	</schema>
 </schemalist>

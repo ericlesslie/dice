@@ -53,6 +53,7 @@ mod imp {
             obj.set_accels_for_action("win.roll-d20", &["<primary>0"]);
             obj.set_accels_for_action("win.reroll", &["r"]);
             obj.set_accels_for_action("win.clear", &["c"]);
+            obj.set_accels_for_action("win.toggle-sidebar", &["F9"]);
         }
     }
 

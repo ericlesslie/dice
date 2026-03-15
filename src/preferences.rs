@@ -98,6 +98,22 @@ pub fn build_preferences_dialog() -> adw::PreferencesDialog {
 
     rng_group.add(&rng_row);
     page.add(&rng_group);
+
+    // History group
+    let history_group = adw::PreferencesGroup::builder()
+        .title("History")
+        .build();
+
+    let record_all_row = adw::SwitchRow::builder()
+        .title("Record all rolls")
+        .subtitle("Record every die addition to Recents, not just Reroll and Clear")
+        .build();
+
+    settings.bind("record-all-rolls", &record_all_row, "active")
+        .build();
+
+    history_group.add(&record_all_row);
+    page.add(&history_group);
     dialog.add(&page);
 
     dialog
